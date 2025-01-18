@@ -7,14 +7,10 @@ import sys
 import random
 import time
 from object.particle import Particle, RingParticle
+from util import setup_display, BLACK
 
 # Configuration
-DEVICE_INDEX = 1
-SAMPLE_RATE = 44100
-CHANNELS = 2
-BLOCKSIZE = 1024
-LATENCY = "high"
-BLACK = (0, 0, 0)
+sample_rate = 44100
 volume = 0
 bass, midrange, treble = 0, 0, 0
 particles = []
@@ -48,20 +44,6 @@ PALETTES = {
     "Desert Glow": [(210, 180, 140), (244, 164, 96), (70, 130, 180)],
 }
 
-
-# Initialize display
-def setup_display():
-    os.putenv("DISPLAY", ":0")
-    os.putenv("SDL_VIDEODRIVER", "x11")
-
-    pygame.display.init()
-    size = (800, 480)
-    global screen
-    screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
-    screen.fill(BLACK)
-    pygame.font.init()
-    pygame.display.update()
-
 # Audio callback
 def audio_callback(indata, frames, time, status):
     global volume, bass, midrange, treble, max_volume
@@ -77,25 +59,26 @@ def audio_callback(indata, frames, time, status):
 
         # Perform FFT on the audio data
         fft_data = np.abs(np.fft.rfft(indata[:, 0]))  # Use one channel
-        freqs = np.fft.rfftfreq(len(indata[:, 0]), 1 / SAMPLE_RATE)
+        freqs = np.fft.rfftfreq(len(indata[:, 0]), 1 / sample_rate)
 
         # Bass (20-250 Hz), Midrange (250-4000 Hz), Treble (4000-20000 Hz)
         bass = np.mean(fft_data[(freqs >= 20) & (freqs < 250)])
         midrange = np.mean(fft_data[(freqs >= 250) & (freqs < 4000)])
         treble = np.mean(fft_data[(freqs >= 4000)])
 
-def switch_palette():
-    global selected_palette, last_palette_switch
+def switch_palette(selected_palette):
+    global last_palette_switch
     if time.time() - last_palette_switch > 30:
         selected_palette = random.choice(list(PALETTES.values()))
         last_palette_switch = time.time()
+        return selected_palette
 
-def draw_palette_name():
+def draw_palette_name(screen, selected_palette):
     font = pygame.font.SysFont(None, 36)
     text = font.render(f"Palette: {list(PALETTES.keys())[list(PALETTES.values()).index(selected_palette)]}", True, (255, 255, 255))
     screen.blit(text, (10, 10))
 
-def get_smooth_color(bass, midrange, treble, max_volume=1):
+def get_smooth_color(selected_palette, bass, midrange, treble, max_volume=1):
     """Generates a color based on frequency bands and the selected palette."""
     # Normalize each frequency band relative to max volume
     bass_norm = min(1, bass / max_volume)
@@ -120,13 +103,12 @@ def get_smooth_color(bass, midrange, treble, max_volume=1):
     )
 
 # Draw radial patterns based on frequency bands
-def draw_radial_patterns():
+def draw_radial_patterns(screen, selected_palette):
 
-    global screen, volume, bass, midrange, treble, max_volume
-    screen.fill(BLACK)
-
+    global volume, bass, midrange, treble, max_volume
+    
     # Get a balanced color based on the frequency bands
-    color = get_smooth_color(bass, midrange, treble, max_volume)
+    color = get_smooth_color(selected_palette, bass, midrange, treble, max_volume)
 
     # Center of the screen
     center_x, center_y = screen.get_width() // 2, screen.get_height() // 2
@@ -147,12 +129,8 @@ def draw_radial_patterns():
         if not particle.is_alive():
             particles.remove(particle)
 
-    draw_palette_name()
 
-    pygame.display.update()
-
-
-def get_smooth_color(bass, midrange, treble, max_volume=1):
+def get_smooth_color(selected_palette, bass, midrange, treble, max_volume=1):
     """Generates a color based on frequency bands and the selected palette."""
     # Normalize each frequency band relative to max volume
     bass_norm = min(1, bass / max_volume)
@@ -175,27 +153,50 @@ def get_smooth_color(bass, midrange, treble, max_volume=1):
         max(0, min(255, green)),
         max(0, min(255, blue)),
     )
+
 # Main
-setup_display()
-
-# Randomly select a palette at the start
-selected_palette = random.choice(list(PALETTES.values()))
-print (f"Selected Color Palette: {selected_palette}")
-
-with sd.InputStream(
-    samplerate=SAMPLE_RATE,
-    channels=CHANNELS,
-    device=DEVICE_INDEX,
-    callback=audio_callback,
-    blocksize=BLOCKSIZE,
-    latency=LATENCY
+def main(
+    display: str,
+    video_driver: str,
+    screen_width: int,
+    screen_height: int,
+    samplerate: int,
+    channels: int,
+    device_index: int,
+    blocksize: int,
+    latency: float,
 ):
-    try:
-        while True:
-            draw_radial_patterns()
-            switch_palette()
-            pygame.time.wait(10)
+    
+    screen = setup_display(display, video_driver, screen_width, screen_height)
 
-    except KeyboardInterrupt:
-        pygame.quit()
-        sys.exit()
+    sample_rate = samplerate
+
+    # Randomly select a palette at the start
+    selected_palette = random.choice(list(PALETTES.values()))
+    print (f"Selected Color Palette: {selected_palette}")
+
+    with sd.InputStream(
+        samplerate=samplerate,
+        channels=channels,
+        device=device_index,
+        callback=audio_callback,
+        blocksize=blocksize,
+        latency=latency,
+    ):
+        try:
+            while True:
+                screen.fill(BLACK)
+
+                draw_radial_patterns(screen, selected_palette)
+
+                switch_palette(selected_palette)
+
+                draw_palette_name(screen, selected_palette)
+
+                pygame.display.update()
+
+                pygame.time.wait(10)
+
+        except KeyboardInterrupt:
+            pygame.quit()
+            sys.exit()

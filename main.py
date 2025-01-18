@@ -1,144 +1,75 @@
-import pygame
-import sounddevice as sd
-import numpy as np
-import wave
-import os
-import random
-import sys
+import typer
+import importlib
+from pathlib import Path
 
+app = typer.Typer()
 
-NUM_BANDS=5
-SAMPLE_RATE = 44100
-CHANNELS = 2
-DEVICE = "Loopback"
-DEVICE_INDEX = 1
-BLOCKSIZE=16184
-LATENCY="high"
-BLACK = (0, 0, 0)
-GREEN = (0, 255, 0)
-# Colors to cycle through
-COLORS = [
-    (255, 0, 0),   # Red
-    (0, 255, 0),   # Green
-    (0, 0, 255),   # Blue
-    (255, 255, 0), # Yellow
-    (0, 255, 255), # Cyan
-    (255, 0, 255)  # Magenta
-]
+# Path to the "shows" directory, which we load dynamically
+SHOWS_PATH = Path(__file__).parent / "show"
 
-def setup_display():
-    # Allow running from ssh
-    os.putenv("DISPLAY", ":0")
-    os.putenv('SDL_VIDEODRIVER', "x11")
-    
-    disp_no = os.getenv("DISPLAY")
-    
-    if disp_no:
-        print("I'm running under X display = {0}".format(disp_no))
-
-    pygame.display.init()
-
-    global screen
-    size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
-    print("Framebuffer size: %d x %d" % (size[0], size[1]))
-    screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
-
-    # Clear the screen to start
-    screen.fill((0, 0, 0))
-    # Initialise font support
-    pygame.font.init()
-    # Render the screen
-    pygame.display.update()
-    
-
-def audio_callback(indata, frames, time, status):
-
-    global volume
-
-    #if status:
-        #print(f"Status: {status}")
-
-    # Process audio and update LEDs
-    if status != "input overflow":
-        #volume = np.linalg.norm(indata)  # Calculate volume
-        volume = np.linalg.norm(indata) / np.sqrt(indata.size)
-        print (f"Volume: {volume}")
- 
-# Draw random shapes based on volume
-def draw_shapes():
-    global screen, volume
-    screen.fill(BLACK)
-
-    # Determine number of shapes to draw based on volume
-    num_shapes = int(volume * 50)
-    color = random.choice(COLORS)
-
-    for _ in range(num_shapes):
-        shape_type = random.choice(['circle', 'rect', 'line', 'triangle'])
-        x, y = random.randint(0, 800), random.randint(0, 480)
-        size = random.randint(10, 100)
-
-        if shape_type == 'circle':
-            pygame.draw.circle(screen, color, (x, y), size)
-        elif shape_type == 'rect':
-            pygame.draw.rect(screen, color, (x, y, size, size))
-        elif shape_type == 'line':
-            end_x, end_y = x + random.randint(-100, 100), y + random.randint(-100, 100)
-            pygame.draw.line(screen, color, (x, y), (end_x, end_y), 2)
-        elif shape_type == 'triangle':
-            points = [(x, y), (x + size, y), (x + size // 2, y - size)]
-            pygame.draw.polygon(screen, color, points)
-
-    pygame.display.update()
-
-
-setup_display()
-
-device_info = sd.query_devices(DEVICE_INDEX, 'input')
-SAMPLE_RATE = int(device_info['default_samplerate'])
-
-print (device_info)
-print (f"Default Sample Rate: {SAMPLE_RATE}")
-
-# Start the audio stream
-volume = 0
-# Open the input stream
-with sd.InputStream(
-    samplerate=SAMPLE_RATE,
-    channels=CHANNELS,
-    device=DEVICE_INDEX,  # Replace with your loopback device index or name
-    callback=audio_callback,
-    blocksize=BLOCKSIZE,
-    latency=LATENCY
+@app.command()
+def run(
+    show: str,
+    display: str = typer.Argument(":0", help="Display to run the show on (e.g., ':0')"),
+    video_driver: str = typer.Argument("x11", help="Video driver to use (e.g., 'x11')"),
+    screen_width: int = typer.Argument(800, help="Screen width (e.g., 800)"),
+    screen_height: int = typer.Argument(480, help="Screen height (e.g., 480)"),
+    samplerate: int = typer.Argument(44100, help="Sample rate for the audio stream"),
+    channels: int = typer.Argument(2, help="Number of audio channels"),
+    device_index: int = typer.Argument(None, help="Index of the audio device to use"),
+    blocksize: int = typer.Argument(1024, help="Block size for audio processing"),
+    latency: float = typer.Argument(0.1, help="Audio stream latency"),
 ):
-    # Main loop
+    """
+    Run a show by its name (module in the "show" folder).
+    """
+    show_module_path = SHOWS_PATH / f"{show}.py"
+    if not show_module_path.exists():
+        typer.echo(f"Error: Show '{show}' not found.")
+        raise typer.Exit(code=1)
+
     try:
-        while True:
-            # Handle events
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    stream.stop()
-                    pygame.quit()
-                    sys.exit()
+        # Dynamically import the selected show module
+        show_module = importlib.import_module(f"show.{show}")
+        
+        # Call the main function in the module if it exists
+        if hasattr(show_module, "main"):
+            # Call the 'main' function with all the required arguments
+            show_module.main(
+                display,
+                video_driver,
+                screen_width,
+                screen_height,
+                samplerate,
+                channels,
+                device_index,
+                blocksize,
+                latency,
+            )
+        else:
+            typer.echo(f"Error: Show '{show}' does not have a 'main' function.")
+            raise typer.Exit(code=1)
 
-            # # Clear the screen
-            # screen.fill(BLACK)
+    except Exception as e:
+        typer.echo(f"Error loading show '{show}': {e}")
+        raise typer.Exit(code=1)
 
-            # # Draw a volume bar
-            # bar_height = int(volume * 500)  # Scale the volume
-            # #print(bar_height)
-            # pygame.draw.rect(screen, GREEN, (350, 480 - bar_height, 100, bar_height))
-
-            # # Update the display
-            # #pygame.display.flip()
-            # pygame.display.update()
-
-            # print (bar_height)
-            draw_shapes()
-            pygame.time.wait(int(200 - volume * 100))
-
-    except KeyboardInterrupt:
-        if stream:
-            stream.stop()
-        if pygame:
-            pygame.quit()
+@app.command()
+def list_shows():
+    """
+    List all available shows.
+    """
+    shows = [
+        f.stem for f in SHOWS_PATH.glob("*.py")
+        # make sure to skip module file
+        if f.is_file() and f.stem != "__init__"
+    ]
+    if not shows:
+        typer.echo("No available shows found.")
+    else:
+        typer.echo("Available shows:")
+        for show in shows:
+            typer.echo(f"- {show}")
+        
+if __name__ == "__main__":
+    app()

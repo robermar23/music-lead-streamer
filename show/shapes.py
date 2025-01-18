@@ -5,15 +5,7 @@ import random
 import os
 import sys
 import math
-
-
-# Configuration
-DEVICE_INDEX = 1
-SAMPLE_RATE = 44100
-CHANNELS = 2
-BLOCKSIZE = 1024
-LATENCY = "high"
-BLACK = (0, 0, 0)
+from util import setup_display, BLACK
 
 # Colors to cycle through
 COLORS = [
@@ -25,18 +17,7 @@ COLORS = [
     (255, 0, 255)  # Magenta
 ]
 
-# Initialize display
-def setup_display():
-    os.putenv("DISPLAY", ":0")
-    os.putenv("SDL_VIDEODRIVER", "x11")
-
-    pygame.display.init()
-    size = (800, 480)
-    global screen
-    screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
-    screen.fill(BLACK)
-    pygame.font.init()
-    pygame.display.update()
+sample_Rate = 44100
 
 # Audio callback
 volume = 0
@@ -52,7 +33,7 @@ def audio_callback(indata, frames, time, status):
 
     # Perform FFT on the audio data
     fft_data = np.abs(np.fft.rfft(indata[:, 0]))  # Use one channel
-    freqs = np.fft.rfftfreq(len(indata[:, 0]), 1 / SAMPLE_RATE)
+    freqs = np.fft.rfftfreq(len(indata[:, 0]), 1 / sample_Rate)
 
     # Bass (20-250 Hz), Midrange (250-4000 Hz), Treble (4000-20000 Hz)
     bass = np.mean(fft_data[(freqs >= 20) & (freqs < 250)])
@@ -67,8 +48,8 @@ def get_smooth_color(t):
     return (r, g, b)
 
 # Draw shapes based on frequency bands
-def draw_shapes1():
-    global screen, volume, bass, midrange, treble
+def draw_shapes1(screen):
+    global volume, bass, midrange, treble
     screen.fill(BLACK)
 
     # Determine the size of shapes based on volume
@@ -105,8 +86,8 @@ def draw_shapes1():
 
     pygame.display.update()
 
-def draw_shapes2():
-    global screen, volume, bass, midrange, treble
+def draw_shapes2(screen):
+    global volume, bass, midrange, treble
     screen.fill(BLACK)
 
     # Determine the size of shapes based on volume
@@ -141,20 +122,35 @@ def draw_shapes2():
 
 
 # Main
-setup_display()
-with sd.InputStream(
-    samplerate=SAMPLE_RATE,
-    channels=CHANNELS,
-    device=DEVICE_INDEX,
-    callback=audio_callback,
-    blocksize=BLOCKSIZE,
-    latency=LATENCY
+def main(
+    display: str,
+    video_driver: str,
+    screen_width: int,
+    screen_height: int,
+    samplerate: int,
+    channels: int,
+    device_index: int,
+    blocksize: int,
+    latency: float,
 ):
-    try:
-        while True:
-            draw_shapes2()
-            pygame.time.wait(100)  # Introduces a delay to slow down the drawing
+    
+    screen = setup_display(display, video_driver, screen_width, screen_height)
 
-    except KeyboardInterrupt:
-        pygame.quit()
-        sys.exit()
+    sample_Rate = samplerate
+
+    with sd.InputStream(
+        samplerate=samplerate,
+        channels=channels,
+        device=device_index,
+        callback=audio_callback,
+        blocksize=blocksize,
+        latency=latency,
+    ):
+        try:
+            while True:
+                draw_shapes2(screen)
+                pygame.time.wait(100)  # Introduces a delay to slow down the drawing
+
+        except KeyboardInterrupt:
+            pygame.quit()
+            sys.exit()

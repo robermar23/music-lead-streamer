@@ -6,6 +6,7 @@ import os
 import sys
 import random
 import time
+from util import setup_display
 
 # Configuration
 DEVICE_INDEX = 1
@@ -52,18 +53,6 @@ PALETTES = {
     "Desert Glow": [(210, 180, 140), (244, 164, 96), (70, 130, 180)],
 }
 
-# Initialize display
-def setup_display():
-    os.putenv("DISPLAY", ":0")
-    os.putenv("SDL_VIDEODRIVER", "x11")
-
-    pygame.display.init()
-    size = (800, 480)
-    global screen
-    screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
-    screen.fill(BLACK)
-    pygame.font.init()
-    pygame.display.update()
 
 # Audio Callback
 
@@ -166,26 +155,38 @@ def draw_frequency_amplitudes():
     pygame.display.update()
 
 # Main
-setup_display()
-
-# Randomly select a palette at the start
-selected_palette = random.choice(list(PALETTES.values()))
-print (f"Selected Color Palette: {selected_palette}")
-
-with sd.InputStream(
-    samplerate=SAMPLE_RATE,
-    channels=CHANNELS,
-    device=DEVICE_INDEX,
-    callback=audio_callback,
-    blocksize=BLOCKSIZE,
-    latency=LATENCY
+def main(
+    display: str,
+    video_driver: str,
+    screen_width: int,
+    screen_height: int,
+    samplerate: int,
+    channels: int,
+    device_index: int,
+    blocksize: int,
+    latency: float,
 ):
-    try:
-        while True:
-          draw_frequency_amplitudes()  
-          switch_palette()
-          pygame.time.wait(10)
+    
+    screen = setup_display(display, video_driver, screen_width, screen_height)
 
-    except KeyboardInterrupt:
-        pygame.quit()
-        sys.exit()
+    # Randomly select a palette at the start
+    selected_palette = random.choice(list(PALETTES.values()))
+    print (f"Selected Color Palette: {selected_palette}")
+
+    with sd.InputStream(
+        samplerate=samplerate,
+        channels=channels,
+        device=device_index,
+        callback=audio_callback,
+        blocksize=blocksize,
+        latency=latency,
+    ):
+        try:
+            while True:
+            draw_frequency_amplitudes()  
+            switch_palette()
+            pygame.time.wait(10)
+
+        except KeyboardInterrupt:
+            pygame.quit()
+            sys.exit()

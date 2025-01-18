@@ -6,13 +6,10 @@ import os
 import sys
 import random
 import time
+from util import setup_display
 
 # Configuration
-DEVICE_INDEX = 1
-SAMPLE_RATE = 44100
-CHANNELS = 2
-BLOCKSIZE = 1024
-LATENCY = "high"
+sample_rate = 44100
 NUM_BANDS = 25  # Number of frequency bands
 BAR_WIDTH = 25  # Width of each bar
 BAR_SPACING = 5  # Space between bars
@@ -24,7 +21,6 @@ BLACK = (0, 0, 0)
 volume = 0
 bass, midrange, treble = 0, 0, 0
 max_volume = 1
-
 
 # Switch palette every 10 seconds
 last_palette_switch = time.time()
@@ -75,24 +71,11 @@ PALETTES = {
     "Dreamy Pastels": [(250, 218, 221), (230, 230, 250), (255, 228, 225)],
 }
 
-# Initialize display
-def setup_display():
-    os.putenv("DISPLAY", ":0")
-    os.putenv("SDL_VIDEODRIVER", "x11")
-
-    pygame.display.init()
-    size = (800, 480)
-    global screen
-    screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
-    screen.fill(BLACK)
-    pygame.font.init()
-    pygame.display.update()
-
 # Audio Callback
 frequency_amplitudes = np.zeros(NUM_BANDS)
 peak_positions = np.zeros(NUM_BANDS)
-#band_frequencies = np.logspace(np.log10(20), np.log10(SAMPLE_RATE / 2), NUM_BANDS + 1)
-band_frequencies = np.geomspace(20, SAMPLE_RATE / 2, NUM_BANDS + 1)
+#band_frequencies = np.logspace(np.log10(20), np.log10(sample_rate / 2), NUM_BANDS + 1)
+band_frequencies = np.geomspace(20, sample_rate / 2, NUM_BANDS + 1)
 def audio_callback(indata, frames, time, status):
     global frequency_amplitudes
     if status:
@@ -102,11 +85,11 @@ def audio_callback(indata, frames, time, status):
       
         # Perform FFT
         fft_data = np.abs(np.fft.rfft(indata[:, 0]))  # Use one channel
-        freqs = np.fft.rfftfreq(len(indata[:, 0]), 1 / SAMPLE_RATE)
+        freqs = np.fft.rfftfreq(len(indata[:, 0]), 1 / sample_rate)
 
         # Calculate frequency band amplitudes
         band_amplitudes = np.zeros(NUM_BANDS)
-        band_edges = np.logspace(np.log10(20), np.log10(SAMPLE_RATE / 2), NUM_BANDS + 1)
+        band_edges = np.logspace(np.log10(20), np.log10(sample_rate / 2), NUM_BANDS + 1)
 
         for i in range(NUM_BANDS):
             #band_amplitudes[i] = np.mean(fft_data[(freqs >= band_edges[i]) & (freqs < band_edges[i + 1])])
@@ -141,7 +124,7 @@ def switch_palette():
         BAR_COLOR_BOTTOM = selected_palette[1]
         BAR_PEAK_COLOR = selected_palette[2]
 
-def draw_palette_name():
+def draw_palette_name(screen):
     font = pygame.font.SysFont(None, 36)
     text = font.render(f"Palette: {list(PALETTES.keys())[list(PALETTES.values()).index(selected_palette)]}", True, (255, 255, 255))
     screen.blit(text, (10, 10))
@@ -156,7 +139,7 @@ def draw_gradient_bar(screen, x, y, width, height, color_top, color_bottom):
         pygame.draw.line(screen, (r, g, b), (x, y + i), (x + width, y + i))
 
 # Function to draw frequency labels
-def draw_frequency_labels():
+def draw_frequency_labels(screen):
     """Draws frequency labels below each bar."""
     font = pygame.font.SysFont(None, 10)
     for i in range(NUM_BANDS):
@@ -166,7 +149,7 @@ def draw_frequency_labels():
         y = screen.get_height() - 20  # Position below the bars
         screen.blit(label, (x, y))
 
-def draw_db_scale():
+def draw_db_scale(screen):
     """Draws a decibel (dB) scale on the left side of the screen."""
     max_height = screen.get_height() - 40  # Leave space for labels and bars
     font = pygame.font.SysFont(None, 20)
@@ -176,7 +159,7 @@ def draw_db_scale():
         label = font.render(f"{dB} dB", True, (255, 255, 255))  # White text
         screen.blit(label, (10, max_height - i - 20))  # Position labels on the left
 
-def draw_frequency_amplitudes():
+def draw_frequency_amplitudes(screen):
 
     global BAR_COLOR_TOP, BAR_COLOR_BOTTOM, BAR_PEAK_COLOR
 
@@ -202,7 +185,7 @@ def draw_frequency_amplitudes():
 
       draw_gradient_bar(screen, x, y, BAR_WIDTH, bar_height, BAR_COLOR_TOP, BAR_COLOR_BOTTOM)
 
-def determine_background_color():
+def determine_background_color(screen):
     # Determine dominant frequency range
     dominant_frequency = np.argmax(frequency_amplitudes)
     color_factor = dominant_frequency / NUM_BANDS
@@ -222,7 +205,7 @@ def determine_background_color():
 #     for x in range(0, screen.get_width(), 10):
 #         y = int((math.sin(x / 50 + pygame.time.get_ticks() / 500) + 1) * screen.get_height() / 4)
 #         pygame.draw.line(screen, (50, 50, 50), (x, y), (x, y + 5))
-def draw_wave_background():
+def draw_wave_background(screen):
     """Draws a sine wave background that reacts smoothly to the music."""
     # Calculate music-based properties
     bass_intensity = np.clip(np.mean(frequency_amplitudes[:NUM_BANDS // 3]), 0, 1)  # Bass range
@@ -242,7 +225,7 @@ def draw_wave_background():
         )
         pygame.draw.line(screen, (50, 50, 255), (x, y), (x, y + 5))  # Draw a segment of the wave
 
-def create_starfield(num_stars=100):
+def create_starfield(screen, num_stars=100):
     """Initialize the starfield with random positions, base sizes, and brightness."""
     for _ in range(num_stars):
         x = random.randint(0, screen.get_width())
@@ -259,7 +242,7 @@ def create_starfield(num_stars=100):
             "speed": random.uniform(0.5, 2),  # Base horizontal speed
         })
 
-def draw_starfield():
+def draw_starfield(screen):
     """Draw the starfield, reacting to bass for brightness/size and treble for speed."""
     if frequency_amplitudes.size == 0:
         bass_intensity = 0
@@ -300,47 +283,61 @@ def draw_starfield():
 
 
 # Main
-setup_display()
-
-create_starfield()
-
-# Randomly select a palette at the start
-selected_palette = random.choice(list(PALETTES.values()))
-#print (f"Selected Color Palette: {selected_palette}")
-
-with sd.InputStream(
-    samplerate=SAMPLE_RATE,
-    channels=CHANNELS,
-    device=DEVICE_INDEX,
-    callback=audio_callback,
-    blocksize=BLOCKSIZE,
-    latency=LATENCY
+def main(
+    display: str,
+    video_driver: str,
+    screen_width: int,
+    screen_height: int,
+    samplerate: int,
+    channels: int,
+    device_index: int,
+    blocksize: int,
+    latency: float,
 ):
-    try:
-        while True:
-          
-          screen.fill(BLACK)
-          #determine_background_color()
+    
+    screen = setup_display(display, video_driver, screen_width, screen_height)
 
-          #draw_wave_background()
+    sample_rate = samplerate
+    
+    create_starfield(screen)
 
-          # Draw starfield
-          draw_starfield()
+    # Randomly select a palette at the start
+    selected_palette = random.choice(list(PALETTES.values()))
+    #print (f"Selected Color Palette: {selected_palette}")
 
-          draw_db_scale()
-          
-          draw_frequency_amplitudes()  
+    with sd.InputStream(
+        samplerate=samplerate,
+        channels=channels,
+        device=device_index,
+        callback=audio_callback,
+        blocksize=blocksize,
+        latency=latency,
+    ):
+        try:
+            while True:
+            
+                screen.fill(BLACK)
+                #determine_background_color(screen)
 
-          #draw_frequency_labels()
+                #draw_wave_background(screen)
 
-          switch_palette()
+                # Draw starfield
+                draw_starfield(screen)
 
-          #draw_palette_name()
-          
-          pygame.display.update()
+                draw_db_scale(screen)
+                
+                draw_frequency_amplitudes(screen)  
 
-          pygame.time.wait(10)
+                #draw_frequency_labels(screen)
 
-    except KeyboardInterrupt:
-        pygame.quit()
-        sys.exit()
+                switch_palette()
+
+                #draw_palette_name(screen)
+                
+                pygame.display.update()
+
+                pygame.time.wait(10)
+
+        except KeyboardInterrupt:
+            pygame.quit()
+            sys.exit()

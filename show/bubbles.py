@@ -7,16 +7,12 @@ import sys
 import random
 import time
 from object.bubble import Bubble
+from util import setup_display, BLACK
 
 # Configuration
-DEVICE_INDEX = 1
-SAMPLE_RATE = 44100
-CHANNELS = 2
-BLOCKSIZE = 1024
-LATENCY = "high"
+sample_rate = 44100
 NUM_BANDS = 25  # Number of frequency bands
 TEXT_COLOR = (255, 255, 255)  # White for text
-BLACK = (0, 0, 0)
 MAX_BUBBLES = 100
 volume = 0
 bass, midrange, treble = 0, 0, 0
@@ -60,25 +56,12 @@ PALETTES = {
     "Sunrise Bliss": [(255, 87, 51), (255, 195, 113), (255, 159, 127)],
 }
 
-
-# Initialize display
-def setup_display():
-    os.putenv("DISPLAY", ":0")
-    os.putenv("SDL_VIDEODRIVER", "x11")
-
-    pygame.display.init()
-    size = (800, 480)
-    global screen
-    screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
-    screen.fill(BLACK)
-    pygame.font.init()
-    pygame.display.update()
-
 # Audio Callback
 frequency_amplitudes = np.zeros(NUM_BANDS)
 peak_positions = np.zeros(NUM_BANDS)
-#band_frequencies = np.logspace(np.log10(20), np.log10(SAMPLE_RATE / 2), NUM_BANDS + 1)
-band_frequencies = np.geomspace(20, SAMPLE_RATE / 2, NUM_BANDS + 1)
+#band_frequencies = np.logspace(np.log10(20), np.log10(sample_rate / 2), NUM_BANDS + 1)
+band_frequencies = np.geomspace(20, sample_rate / 2, NUM_BANDS + 1)
+
 def audio_callback(indata, frames, time, status):
     global frequency_amplitudes
     if status:
@@ -88,11 +71,11 @@ def audio_callback(indata, frames, time, status):
       
         # Perform FFT
         fft_data = np.abs(np.fft.rfft(indata[:, 0]))  # Use one channel
-        freqs = np.fft.rfftfreq(len(indata[:, 0]), 1 / SAMPLE_RATE)
+        freqs = np.fft.rfftfreq(len(indata[:, 0]), 1 / sample_rate)
 
         # Calculate frequency band amplitudes
         band_amplitudes = np.zeros(NUM_BANDS)
-        band_edges = np.logspace(np.log10(20), np.log10(SAMPLE_RATE / 2), NUM_BANDS + 1)
+        band_edges = np.logspace(np.log10(20), np.log10(sample_rate / 2), NUM_BANDS + 1)
 
         for i in range(NUM_BANDS):
             #band_amplitudes[i] = np.mean(fft_data[(freqs >= band_edges[i]) & (freqs < band_edges[i + 1])])
@@ -183,48 +166,61 @@ def draw_gradient_background(screen, color_top, color_bottom):
         pygame.draw.line(screen, (r, g, b), (0, y), (screen.get_width(), y))
 
 
-# Main
-setup_display()
-
-# Randomly select a palette at the start
-selected_palette = random.choice(list(PALETTES.values()))
-#print (f"Selected Color Palette: {selected_palette}")
-
-with sd.InputStream(
-    samplerate=SAMPLE_RATE,
-    channels=CHANNELS,
-    device=DEVICE_INDEX,
-    callback=audio_callback,
-    blocksize=BLOCKSIZE,
-    latency=LATENCY
+def main(display: str,
+    video_driver: str,
+    screen_width: int,
+    screen_height: int,
+    samplerate: int,
+    channels: int,
+    device_index: int,
+    blocksize: int,
+    latency: float,
 ):
-    try:
-        while True:
-          
-            screen.fill(BLACK)
-          
-            draw_gradient_background(screen, (0, 0, 64), (0, 0, 128))
+    
+    #setup the display
+    screen = setup_display(display, video_driver, screen_width, screen_height)
 
-            # Calculate music intensities
-            if frequency_amplitudes.size > 0:
-                midrange_intensity = np.clip(np.mean(frequency_amplitudes[NUM_BANDS // 3:NUM_BANDS * 2 // 3]), 0, 1)
-                bass_intensity = np.clip(np.mean(frequency_amplitudes[:NUM_BANDS // 3]), 0, 1)
-                treble_intensity = np.clip(np.mean(frequency_amplitudes[NUM_BANDS * 2 // 3:]), 0, 1)
-            else:
-                midrange_intensity = bass_intensity = treble_intensity = 0
-
-            # Create, update, and draw bubbles
-            create_bubbles(midrange_intensity, selected_palette)
-            update_and_draw_bubbles(screen, bass_intensity, treble_intensity)
-
-            switch_palette()
-
-            #draw_palette_name()
+    sample_rate = samplerate
+    
+    # Randomly select a palette at the start
+    selected_palette = random.choice(list(PALETTES.values()))
+    
+    # start audio stream
+    with sd.InputStream(
+        samplerate=samplerate,
+        channels=channels,
+        device=device_index,
+        callback=audio_callback,
+        blocksize=blocksize,
+        latency=latency,
+    ):
+        try:
+            while True:
             
-            pygame.display.update()
+                screen.fill(BLACK)
+            
+                draw_gradient_background(screen, (0, 0, 64), (0, 0, 128))
 
-            pygame.time.wait(10)
+                # Calculate music intensities
+                if frequency_amplitudes.size > 0:
+                    midrange_intensity = np.clip(np.mean(frequency_amplitudes[NUM_BANDS // 3:NUM_BANDS * 2 // 3]), 0, 1)
+                    bass_intensity = np.clip(np.mean(frequency_amplitudes[:NUM_BANDS // 3]), 0, 1)
+                    treble_intensity = np.clip(np.mean(frequency_amplitudes[NUM_BANDS * 2 // 3:]), 0, 1)
+                else:
+                    midrange_intensity = bass_intensity = treble_intensity = 0
 
-    except KeyboardInterrupt:
-        pygame.quit()
-        sys.exit()
+                # Create, update, and draw bubbles
+                create_bubbles(midrange_intensity, selected_palette)
+                update_and_draw_bubbles(screen, bass_intensity, treble_intensity)
+
+                switch_palette()
+
+                #draw_palette_name()
+                
+                pygame.display.update()
+
+                pygame.time.wait(10)
+
+        except KeyboardInterrupt:
+            pygame.quit()
+            sys.exit()
