@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "music-led-streamer"
+version = "0.1.0"
+description = ""
+authors = ["Robert Evans <robermar2@gmail.com>"]
+readme = "README.md"
+packages = [{include = "music_led_streamer"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpy = "^2.2.1"
+rpi-gpio = "^0.7.1"
+sounddevice = "^0.5.1"
+pygame = "^2.6.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
