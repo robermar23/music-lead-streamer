@@ -76,7 +76,7 @@ def audio_callback(indata, frames, time, status):
         # Calculate frequency band amplitudes
         band_amplitudes = np.zeros(NUM_BANDS)
         band_edges = np.logspace(np.log10(20), np.log10(sample_rate / 2), NUM_BANDS + 1)
-
+        
         for i in range(NUM_BANDS):
             #band_amplitudes[i] = np.mean(fft_data[(freqs >= band_edges[i]) & (freqs < band_edges[i + 1])])
             # Extract the frequencies for the current band
@@ -110,14 +110,14 @@ def switch_palette():
         BAR_COLOR_BOTTOM = selected_palette[1]
         BAR_PEAK_COLOR = selected_palette[2]
 
-def draw_palette_name():
+def draw_palette_name(screen):
     font = pygame.font.SysFont(None, 36)
     text = font.render(f"Palette: {list(PALETTES.keys())[list(PALETTES.values()).index(selected_palette)]}", True, (255, 255, 255))
     screen.blit(text, (10, 10))
 
 bubbles = []
 
-def create_bubbles(midrange_intensity, color_palette):
+def create_bubbles(screen, midrange_intensity, color_palette):
     """Create bubbles based on midrange intensity, capped at MAX_BUBBLES."""
     if len(bubbles) >= MAX_BUBBLES:
         return  # Do not create more bubbles if at max limit
@@ -210,12 +210,12 @@ def main(display: str,
                     midrange_intensity = bass_intensity = treble_intensity = 0
 
                 # Create, update, and draw bubbles
-                create_bubbles(midrange_intensity, selected_palette)
+                create_bubbles(screen, midrange_intensity, selected_palette)
                 update_and_draw_bubbles(screen, bass_intensity, treble_intensity)
 
                 switch_palette()
 
-                #draw_palette_name()
+                #draw_palette_name(screen)
                 
                 pygame.display.update()
 
