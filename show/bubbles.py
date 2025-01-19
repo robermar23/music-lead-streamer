@@ -7,7 +7,7 @@ import sys
 import random
 import time
 from object.bubble import Bubble
-from util import setup_display, BLACK
+from util import BLACK
 
 # Configuration
 sample_rate = 44100
@@ -165,62 +165,60 @@ def draw_gradient_background(screen, color_top, color_bottom):
         b = int(color_top[2] * (1 - blend) + color_bottom[2] * blend)
         pygame.draw.line(screen, (r, g, b), (0, y), (screen.get_width(), y))
 
-
-def main(display: str,
-    video_driver: str,
-    screen_width: int,
-    screen_height: int,
-    samplerate: int,
-    channels: int,
-    device_index: int,
-    blocksize: int,
-    latency: float,
-):
+# Global state for the show
+def initialize(audio_settings, screen):
+    """Initialize the show."""
+    global audio_stream, selected_palette
     
-    #setup the display
-    screen = setup_display(display, video_driver, screen_width, screen_height)
+    # Extract audio settings
+    samplerate, channels, device_index, blocksize, latency = audio_settings
 
     sample_rate = samplerate
     
     # Randomly select a palette at the start
     selected_palette = random.choice(list(PALETTES.values()))
-    
-    # start audio stream
-    with sd.InputStream(
+
+    # Initialize audio stream
+    audio_stream = sd.InputStream(
         samplerate=samplerate,
         channels=channels,
         device=device_index,
         callback=audio_callback,
         blocksize=blocksize,
         latency=latency,
-    ):
-        try:
-            while True:
+    )
+    audio_stream.start()
+
+def render_step(screen):
+    """Render a single frame of the visualization."""
+
+    screen.fill(BLACK)
             
-                screen.fill(BLACK)
-            
-                draw_gradient_background(screen, (0, 0, 64), (0, 0, 128))
+    draw_gradient_background(screen, (0, 0, 64), (0, 0, 128))
 
-                # Calculate music intensities
-                if frequency_amplitudes.size > 0:
-                    midrange_intensity = np.clip(np.mean(frequency_amplitudes[NUM_BANDS // 3:NUM_BANDS * 2 // 3]), 0, 1)
-                    bass_intensity = np.clip(np.mean(frequency_amplitudes[:NUM_BANDS // 3]), 0, 1)
-                    treble_intensity = np.clip(np.mean(frequency_amplitudes[NUM_BANDS * 2 // 3:]), 0, 1)
-                else:
-                    midrange_intensity = bass_intensity = treble_intensity = 0
+    # Calculate music intensities
+    if frequency_amplitudes.size > 0:
+        midrange_intensity = np.clip(np.mean(frequency_amplitudes[NUM_BANDS // 3:NUM_BANDS * 2 // 3]), 0, 1)
+        bass_intensity = np.clip(np.mean(frequency_amplitudes[:NUM_BANDS // 3]), 0, 1)
+        treble_intensity = np.clip(np.mean(frequency_amplitudes[NUM_BANDS * 2 // 3:]), 0, 1)
+    else:
+        midrange_intensity = bass_intensity = treble_intensity = 0
 
-                # Create, update, and draw bubbles
-                create_bubbles(screen, midrange_intensity, selected_palette)
-                update_and_draw_bubbles(screen, bass_intensity, treble_intensity)
+    # Create, update, and draw bubbles
+    create_bubbles(screen, midrange_intensity, selected_palette)
+    update_and_draw_bubbles(screen, bass_intensity, treble_intensity)
 
-                switch_palette()
+    switch_palette()
 
-                #draw_palette_name(screen)
-                
-                pygame.display.update()
+    #draw_palette_name(screen)
+    
+    pygame.display.update()
 
-                pygame.time.wait(10)
+    #pygame.time.wait(10)
 
-        except KeyboardInterrupt:
-            pygame.quit()
-            sys.exit()
+def cleanup():
+    """Clean up resources for the show."""
+    global audio_stream
+    if audio_stream:
+        audio_stream.stop()
+        audio_stream.close()

@@ -4,7 +4,7 @@ import numpy as np
 import math
 import os
 import sys
-from util import setup_display, BLACK
+from util import BLACK
 
 # Configuration
 sample_rate = 44100
@@ -48,7 +48,7 @@ def draw_radial_patterns(screen):
     center_x, center_y = screen.get_width() // 2, screen.get_height() // 2
 
     # Adjust bass influence to control ring expansion
-    max_radius = 50 + np.log1p(bass) * 200  # Logarithmic scaling to soften bass influence
+    max_radius = 50 + np.log1p(bass) * 175  # Logarithmic scaling to soften bass influence
     damping = 0.9  # Damping factor to smooth transitions
 
     # Draw expanding rings
@@ -57,49 +57,44 @@ def draw_radial_patterns(screen):
         pygame.draw.circle(screen, color, (center_x, center_y), radius, 2)
 
     # Draw rotating spiral
-    num_points = int(midrange * 50)
+    num_points = int(midrange * 150)
     if num_points > 0:
         angle_step = 2 * math.pi / num_points
         for i in range(num_points):
             angle = i * angle_step + t
             x = center_x + int(max_radius * math.cos(angle) * (i / num_points))
             y = center_y + int(max_radius * math.sin(angle) * (i / num_points))
-            pygame.draw.circle(screen, color, (x, y), 5)
+            pygame.draw.circle(screen, color, (x, y), 2)
 
 
-# Main
-def main(
-    display: str,
-    video_driver: str,
-    screen_width: int,
-    screen_height: int,
-    samplerate: int,
-    channels: int,
-    device_index: int,
-    blocksize: int,
-    latency: float,
-):
+# Global state for the show
+def initialize(audio_settings, screen):
+    """Initialize the show."""
+    global audio_stream
     
-    
-    screen = setup_display(display, video_driver, screen_width, screen_height)
+    # Extract audio settings
+    samplerate, channels, device_index, blocksize, latency = audio_settings
 
-    sample_rate = samplerate
-
-    with sd.InputStream(
+    # Initialize audio stream
+    audio_stream = sd.InputStream(
         samplerate=samplerate,
         channels=channels,
         device=device_index,
         callback=audio_callback,
         blocksize=blocksize,
         latency=latency,
-    ):
-        try:
-            while True:
-                screen.fill(BLACK)
-                draw_radial_patterns(screen)
-                pygame.display.update()
-                pygame.time.wait(10)
+    )
+    audio_stream.start()
 
-        except KeyboardInterrupt:
-            pygame.quit()
-            sys.exit()
+def render_step(screen):
+    """Render a single frame of the visualization."""
+    screen.fill(BLACK)
+    draw_radial_patterns(screen)
+    pygame.display.update()
+
+def cleanup():
+    """Clean up resources for the show."""
+    global audio_stream
+    if audio_stream:
+        audio_stream.stop()
+        audio_stream.close()

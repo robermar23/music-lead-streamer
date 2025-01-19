@@ -5,7 +5,7 @@ import random
 import os
 import sys
 import math
-from util import setup_display, BLACK
+from util import BLACK
 
 # Colors to cycle through
 COLORS = [
@@ -88,8 +88,7 @@ def draw_shapes1(screen):
 
 def draw_shapes2(screen):
     global volume, bass, midrange, treble
-    screen.fill(BLACK)
-
+    
     # Determine the size of shapes based on volume
     shape_size = int(volume * 100)
 
@@ -118,39 +117,38 @@ def draw_shapes2(screen):
             points = [(x, y), (x + size, y), (x + size // 2, y - size)]
             pygame.draw.polygon(screen, color, points)
 
-    pygame.display.update()
 
-
-# Main
-def main(
-    display: str,
-    video_driver: str,
-    screen_width: int,
-    screen_height: int,
-    samplerate: int,
-    channels: int,
-    device_index: int,
-    blocksize: int,
-    latency: float,
-):
+# Global state for the show
+def initialize(audio_settings, screen):
+    """Initialize the show."""
+    global audio_stream
     
-    screen = setup_display(display, video_driver, screen_width, screen_height)
+    # Extract audio settings
+    samplerate, channels, device_index, blocksize, latency = audio_settings
 
     sample_Rate = samplerate
 
-    with sd.InputStream(
+    # Initialize audio stream
+    audio_stream = sd.InputStream(
         samplerate=samplerate,
         channels=channels,
         device=device_index,
         callback=audio_callback,
         blocksize=blocksize,
         latency=latency,
-    ):
-        try:
-            while True:
-                draw_shapes2(screen)
-                pygame.time.wait(100)  # Introduces a delay to slow down the drawing
+    )
+    audio_stream.start()
 
-        except KeyboardInterrupt:
-            pygame.quit()
-            sys.exit()
+def render_step(screen):
+    """Render a single frame of the visualization."""
+    screen.fill(BLACK)
+    draw_shapes2(screen)
+    pygame.display.update()
+    pygame.time.wait(100)  # Introduces a delay to slow down the drawing
+
+def cleanup():
+    """Clean up resources for the show."""
+    global audio_stream
+    if audio_stream:
+        audio_stream.stop()
+        audio_stream.close()

@@ -6,7 +6,7 @@ import os
 import sys
 import random
 import time
-from util import setup_display
+from util import BLACK
 
 # Configuration
 sample_rate = 44100
@@ -17,7 +17,6 @@ BAR_COLOR_TOP = (0, 255, 0)  # Green color for bars
 BAR_COLOR_BOTTOM = (0, 100, 0)
 BAR_PEAK_COLOR = (0, 255, 0)
 TEXT_COLOR = (255, 255, 255)  # White for text
-BLACK = (0, 0, 0)
 volume = 0
 bass, midrange, treble = 0, 0, 0
 max_volume = 1
@@ -281,63 +280,58 @@ def draw_starfield(screen):
         star["current_size"] = max(star["base_size"], star["current_size"] - 0.2)
 
 
-
-# Main
-def main(
-    display: str,
-    video_driver: str,
-    screen_width: int,
-    screen_height: int,
-    samplerate: int,
-    channels: int,
-    device_index: int,
-    blocksize: int,
-    latency: float,
-):
+# Global state for the show
+def initialize(audio_settings, screen):
+    """Initialize the show."""
+    global audio_stream, selected_palette
     
-    screen = setup_display(display, video_driver, screen_width, screen_height)
+    # Extract audio settings
+    samplerate, channels, device_index, blocksize, latency = audio_settings
 
     sample_rate = samplerate
     
-    create_starfield(screen)
-
     # Randomly select a palette at the start
     selected_palette = random.choice(list(PALETTES.values()))
-    #print (f"Selected Color Palette: {selected_palette}")
 
-    with sd.InputStream(
+    create_starfield(screen)
+
+    # Initialize audio stream
+    audio_stream = sd.InputStream(
         samplerate=samplerate,
         channels=channels,
         device=device_index,
         callback=audio_callback,
         blocksize=blocksize,
         latency=latency,
-    ):
-        try:
-            while True:
-            
-                screen.fill(BLACK)
-                #determine_background_color(screen)
+    )
+    audio_stream.start()
 
-                #draw_wave_background(screen)
+def render_step(screen):
+    """Render a single frame of the visualization."""
 
-                # Draw starfield
-                draw_starfield(screen)
+    screen.fill(BLACK)
+    #determine_background_color(screen)
 
-                draw_db_scale(screen)
-                
-                draw_frequency_amplitudes(screen)  
+    #draw_wave_background(screen)
 
-                #draw_frequency_labels(screen)
+    # Draw starfield
+    draw_starfield(screen)
 
-                switch_palette()
+    draw_db_scale(screen)
+    
+    draw_frequency_amplitudes(screen)  
 
-                #draw_palette_name(screen)
-                
-                pygame.display.update()
+    #draw_frequency_labels(screen)
 
-                pygame.time.wait(10)
+    switch_palette()
 
-        except KeyboardInterrupt:
-            pygame.quit()
-            sys.exit()
+    #draw_palette_name(screen)
+    
+    pygame.display.update()
+
+def cleanup():
+    """Clean up resources for the show."""
+    global audio_stream
+    if audio_stream:
+        audio_stream.stop()
+        audio_stream.close()

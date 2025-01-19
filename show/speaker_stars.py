@@ -7,7 +7,7 @@ import sys
 import random
 import time
 from object.star import Star
-from util import setup_display, BLACK
+from util import BLACK
 
 # Configuration
 sample_rate = 44100
@@ -149,48 +149,46 @@ def get_smooth_color(selected_palette, bass, midrange, treble, max_volume=1):
         max(0, min(255, blue)),
     )
 
-# Main
-def main(
-    display: str,
-    video_driver: str,
-    screen_width: int,
-    screen_height: int,
-    samplerate: int,
-    channels: int,
-    device_index: int,
-    blocksize: int,
-    latency: float,
-):
+# Global state for the show
+def initialize(audio_settings, screen):
+    """Initialize the show."""
+    global audio_stream, selected_palette
     
-    screen = setup_display(display, video_driver, screen_width, screen_height)
+    # Extract audio settings
+    samplerate, channels, device_index, blocksize, latency = audio_settings
 
     sample_rate = samplerate
 
     # Randomly select a palette at the start
     selected_palette = random.choice(list(PALETTES.values()))
-    print (f"Selected Color Palette: {selected_palette}")
 
-    with sd.InputStream(
+    # Initialize audio stream
+    audio_stream = sd.InputStream(
         samplerate=samplerate,
         channels=channels,
         device=device_index,
         callback=audio_callback,
         blocksize=blocksize,
         latency=latency,
-    ):
-        try:
-            while True:
-                screen.fill(BLACK)
+    )
+    audio_stream.start()
 
-                draw_radial_patterns(screen, selected_palette)
+def render_step(screen):
+    """Render a single frame of the visualization."""
+    screen.fill(BLACK)
 
-                switch_palette(selected_palette)
+    draw_radial_patterns(screen, selected_palette)
 
-                draw_palette_name(screen, selected_palette)
+    switch_palette(selected_palette)
 
-                pygame.display.update()
-                pygame.time.wait(10)
+    draw_palette_name(screen, selected_palette)
 
-        except KeyboardInterrupt:
-            pygame.quit()
-            sys.exit()
+    pygame.display.update()
+    #pygame.time.wait(10)
+
+def cleanup():
+    """Clean up resources for the show."""
+    global audio_stream
+    if audio_stream:
+        audio_stream.stop()
+        audio_stream.close()
