@@ -17,8 +17,8 @@ FLARE_COLOR = (255, 69, 0)  # Orange-red flares
 BACKGROUND_COLOR = (10, 10, 30)  # Dark blue for a space-like feel
 FLARE_LIFE_MAX = 20  # Maximum lifecycle of a flare (in frames)
 ROTATION_SPEED_BASE = 0.02  # Base rotation speed
-BASE_RADIUS = 25
-RADIUS_SCALING = 1.1  # Maximum increase in radius
+BASE_RADIUS = 15
+RADIUS_SCALING = 1.05  # Maximum increase in radius
 
 # Switch palette every 10 seconds
 last_palette_switch = time.time()
