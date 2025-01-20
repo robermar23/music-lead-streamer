@@ -21,6 +21,8 @@ def list_shows():
         for show in shows:
             typer.echo(f"- {show}")
 
+    return shows
+
 
 @app.command()
 def run(
@@ -87,13 +89,13 @@ def run(
 
 @app.command()
 def rotate(
-    display: str = typer.Argument(..., help="Display to run the shows on (e.g., ':0')"),
-    video_driver: str = typer.Argument(..., help="Video driver to use (e.g., 'x11')"),
-    screen_width: int = typer.Argument(..., help="Screen width (e.g., 800)"),
-    screen_height: int = typer.Argument(..., help="Screen height (e.g., 480)"),
+    display: str = typer.Argument(":0", help="Display to run the show on (e.g., ':0')"),
+    video_driver: str = typer.Argument("x11", help="Video driver to use (e.g., 'x11')"),
+    screen_width: int = typer.Argument(800, help="Screen width (e.g., 800)"),
+    screen_height: int = typer.Argument(480, help="Screen height (e.g., 480)"),
     samplerate: int = typer.Argument(44100, help="Sample rate for the audio stream"),
     channels: int = typer.Argument(2, help="Number of audio channels"),
-    device_index: int = typer.Argument(None, help="Index of the audio device to use"),
+    device_index: int = typer.Argument(1, help="Index of the audio device to use"),
     blocksize: int = typer.Argument(1024, help="Block size for audio processing"),
     latency: float = typer.Argument(0.1, help="Audio stream latency"),
     timer: int = typer.Argument(30, help="Time in seconds before switching to the next show"),
@@ -105,7 +107,7 @@ def rotate(
         typer.echo("No shows available to rotate.")
         raise typer.Exit(code=1)
 
-    screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
+    screen = setup_display(display, video_driver, screen_width, screen_height)
     pygame.display.set_caption("Show Rotator")
 
     # Shared audio settings
@@ -127,7 +129,7 @@ def rotate(
         show_name = shows[index]
         show_module = importlib.import_module(f"show.{show_name}")
         if hasattr(show_module, "initialize"):
-            show_module.initialize(audio_settings)
+            show_module.initialize(audio_settings, screen)
 
     load_show(current_index)
 

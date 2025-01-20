@@ -40,7 +40,7 @@ class RingParticle:
         self.color = color
         self.radius = initial_radius
         #self.expansion_rate = expansion_rate
-        self.expansion_rate = 1 + bass * 2  # Expansion rate based on bass frequency
+        self.expansion_rate = 1 + bass * 0.25  # Expansion rate based on bass frequency
         self.life = 50  # Lifespan of the ring
 
     def expand(self):
@@ -60,4 +60,4 @@ class RingParticle:
             int(self.color[1] * alpha),
             int(self.color[2] * alpha),
         )
-        pygame.draw.circle(screen, faded_color, (int(self.x), int(self.y)), int(self.radius), 2)
+        pygame.draw.circle(screen, faded_color, (int(self.x), int(self.y)), int(self.radius), int(self.life / 4))
