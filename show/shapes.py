@@ -5,26 +5,20 @@ import random
 import os
 import sys
 import math
-from util import BLACK
+from util import BLACK, frequency_to_rgb
+from object.shape import Shape
 
-# Colors to cycle through
-COLORS = [
-    (255, 0, 0),   # Red
-    (0, 255, 0),   # Green
-    (0, 0, 255),   # Blue
-    (255, 255, 0), # Yellow
-    (0, 255, 255), # Cyan
-    (255, 0, 255)  # Magenta
-]
 
 sample_Rate = 44100
 
 # Audio callback
 volume = 0
 bass, midrange, treble = 0, 0, 0
+dominant_frequency = 0
+shapes = []  # List to store active shapes
 
 def audio_callback(indata, frames, time, status):
-    global volume, bass, midrange, treble
+    global volume, bass, midrange, treble, dominant_frequency
     if status:
         print(f"Status: {status}")
 
@@ -39,84 +33,61 @@ def audio_callback(indata, frames, time, status):
     bass = np.mean(fft_data[(freqs >= 20) & (freqs < 250)])
     midrange = np.mean(fft_data[(freqs >= 250) & (freqs < 4000)])
     treble = np.mean(fft_data[(freqs >= 4000)])
+    # Find the dominant frequency
+    dominant_idx = np.argmax(fft_data)
+    dominant_frequency = freqs[dominant_idx]# * 2  # Adjust for doubling frequency
+     # Ensure the dominant frequency is above a safe threshold
+    if dominant_frequency < 20:
+        dominant_frequency = 20  # Set a minimum frequency
 
-def get_smooth_color(t):
-    """Generates a smooth gradient color based on time (t)."""
-    r = int((math.sin(t) * 127 + 128) % 255)
-    g = int((math.sin(t + 2) * 127 + 128) % 255)
-    b = int((math.sin(t + 4) * 127 + 128) % 255)
-    return (r, g, b)
+# Draw shapes
+def draw_shapes(screen, dt):
+    global shapes, bass, midrange, treble, volume, dominant_frequency
+    #total_shapes = int((bass + midrange + treble)/2)  # Total number of shapes to create
 
-# Draw shapes based on frequency bands
-def draw_shapes1(screen):
-    global volume, bass, midrange, treble
-    screen.fill(BLACK)
+    # Screen dimensions
+    #screen_width, screen_height = screen.get_width(), screen.get_height()
 
-    # Determine the size of shapes based on volume
-    shape_size = int(volume * 100)
+    # Create new shapes
+    total_shapes = int((bass * 0.1))  # Total number of new shapes to create
+    if len(shapes) + total_shapes <= 900:
+        print (f"New shapes: {total_shapes}")
+        for _ in range(total_shapes):
+            x = random.randint(0, screen.get_width())
+            y = random.randint(0, screen.get_height())
+            size = int(volume * 100)  # Scale size with volume
+            # Use dominant frequency to determine the color
+            color = frequency_to_rgb(dominant_frequency)
+            lifetime = random.uniform(1, 3)  # Randomize lifetime
+            shapes.append(Shape(x, y, size, color, lifetime, treble, midrange, bass))
 
-    # Randomly select a color based on treble
-    color_index = int(treble) % len(COLORS)
-    #color = COLORS[color_index]
-    color = tuple(
-        max(0, min(255, int((1 - treble) * start + treble * end)))
-        for start, end in zip(COLORS[color_index], COLORS[(color_index + 1) % len(COLORS)])
-    )
+    # Update and draw existing shapes.  update returns False if the shape is expired
+    shapes = [shape for shape in shapes if shape.update(dt)]
+    for shape in shapes:
+        shape.draw(screen)
 
-    # Draw shapes based on bass and midrange
-    num_shapes = int(bass * 2)
-    for _ in range(num_shapes):
-        shape_type = random.choice(['circle', 'rect', 'line', 'triangle'])
-        x, y = random.randint(0, 800), random.randint(0, 480)
-        if shape_size > 10:
-            size = random.randint(10, shape_size)
-        else:
-            size = 1
+    print (f"Alive Shapes: {len(shapes)}")
 
-        if shape_type == 'circle':
-            pygame.draw.circle(screen, color, (x, y), size)
-        elif shape_type == 'rect':
-            pygame.draw.rect(screen, color, (x, y, size, size))
-        elif shape_type == 'line':
-            end_x, end_y = x + random.randint(-100, 100), y + random.randint(-100, 100)
-            pygame.draw.line(screen, color, (x, y), (end_x, end_y), 2)
-        elif shape_type == 'triangle':
-            points = [(x, y), (x + size, y), (x + size // 2, y - size)]
-            pygame.draw.polygon(screen, color, points)
+# def add_shape(x, y, size, frequency):
+#     """Add a new shape to the shapes list."""
+#     # Size based on volume
+#     #size = int(volume * 100)
 
-    pygame.display.update()
+#     # Expanded color logic
+#     # color = (
+#     #     min(255, int(255 * abs(math.sin(treble * 0.1 + 4)))),
+#     #     min(255, int(255 * abs(math.sin(midrange * 0.1 + 2)))),
+#     #     min(255, int(255 * abs(math.sin(bass * 0.1 + 1)))),
+#     # )
+#     color = frequency_to_rgb(frequency)
 
-def draw_shapes2(screen):
-    global volume, bass, midrange, treble
-    
-    # Determine the size of shapes based on volume
-    shape_size = int(volume * 100)
+#     # Lifetime influenced by treble
+#     lifetime = max(1, int(treble * 2))
 
-    # Get a smooth gradient color based on time
-    t = pygame.time.get_ticks() / 1000  # Time in seconds
-    color = get_smooth_color(t)
+#     # Add the new shape
+#     shapes.append(Shape(x, y, size, color, lifetime, treble, midrange, bass))
 
-    # Draw shapes based on bass and midrange
-    num_shapes = int(bass * 2)
-    for _ in range(num_shapes):
-        shape_type = random.choice(['circle', 'rect', 'line', 'triangle'])
-        x, y = random.randint(0, 800), random.randint(0, 480)
-        if shape_size > 10:
-            size = random.randint(10, shape_size)
-        else:
-            size = 1
-
-        if shape_type == 'circle':
-            pygame.draw.circle(screen, color, (x, y), size)
-        elif shape_type == 'rect':
-            pygame.draw.rect(screen, color, (x, y, size, size))
-        elif shape_type == 'line':
-            end_x, end_y = x + random.randint(-100, 100), y + random.randint(-100, 100)
-            pygame.draw.line(screen, color, (x, y), (end_x, end_y), 2)
-        elif shape_type == 'triangle':
-            points = [(x, y), (x + size, y), (x + size // 2, y - size)]
-            pygame.draw.polygon(screen, color, points)
-
+    #print (f"Added volume {volume} with size {size} and lifetime {lifetime}")
 
 # Global state for the show
 def initialize(audio_settings, screen):
@@ -141,10 +112,10 @@ def initialize(audio_settings, screen):
 
 def render_step(screen):
     """Render a single frame of the visualization."""
+    dt = pygame.time.Clock().tick(60) / 1000  # Delta time in seconds
     screen.fill(BLACK)
-    draw_shapes2(screen)
+    draw_shapes(screen, dt)
     pygame.display.update()
-    pygame.time.wait(100)  # Introduces a delay to slow down the drawing
 
 def cleanup():
     """Clean up resources for the show."""
