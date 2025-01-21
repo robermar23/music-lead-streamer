@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+from util import hsv_to_rgb
 
 # Shape Class
 class Shape:
@@ -16,6 +17,12 @@ class Shape:
         # Determine movement direction based on frequencies
         self.dx = 0
         self.dy = 0
+
+        # Unique properties for behaviors
+        self.angle = random.uniform(0, 360)  # Rotation angle
+        self.rotation_speed = random.uniform(30, 100)  # Degrees per second
+        self.pulse = random.uniform(0.5, 1.5)  # Pulsating scale factor
+        self.twinkle_rate = random.uniform(5, 15)  # Twinkle speed
 
         # Randomly choose a shape type (circle, star, snowflake, polygon)
         self.shape_type = random.choice([
@@ -65,13 +72,50 @@ class Shape:
             self.alpha = max(0, int(255 * ((self.lifetime - self.age) / (self.lifetime / 3))))
         else:
             self.alpha = 255
+
+         # Adjust unique behavior per shape type
+        if self.shape_type == 'circle':
+            self.angle = (self.angle + self.rotation_speed * dt) % 360  # Spin
+        elif self.shape_type == 'arrow':
+            if random.random() < 0.05:  # Occasionally change direction
+                self.dx = random.uniform(-2, 2)
+                self.dy = random.uniform(-2, 2)
+        elif self.shape_type == 'star':
+            self.pulse = 0.9 + 0.1 * math.sin(self.age * self.twinkle_rate)  # Twinkle effect
+        elif self.shape_type == 'snowflake':
+            self.dx += random.uniform(-0.1, 0.1) * dt  # Slight horizontal drift
+        elif self.shape_type == 'diamond':
+            self.pulse = 0.8 + 0.2 * math.sin(self.age * 5)  # Pulsating size
+        elif self.shape_type == 'wave':
+            self.angle = (self.angle + 10 * math.sin(self.age * 3)) % 360  # Sway effect
+        elif self.shape_type == 'polygon':
+            self.angle = (self.angle + self.rotation_speed * dt) % 360  # Rotate steadily
+        elif self.shape_type == 'spiral':
+            self.angle = (self.angle + self.rotation_speed * dt) % 360  # Continuous rotation
+        elif self.shape_type == 'heart':
+            self.size = self.size * (0.9 + 0.1 * math.sin(self.age * 2))  # Heartbeat effect
+        elif self.shape_type == 'burst':
+            self.pulse = 0.8 + 0.2 * math.cos(self.age * 5)  # Expand and contract
+
+
         return self.age < self.lifetime  # Return False if the shape is expired
 
     def draw(self, screen):
+        
+         # Convert HSB to RGB for color
+        # rgb = hsv_to_rgb(self.hue, self.saturation, self.brightness)
+        # self.color = tuple(int(c * 255) for c in rgb)
+
         surf = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
+
         draw_method = getattr(self, f"draw_{self.shape_type}", None)
         if draw_method:
             draw_method(surf)
+        
+         # Rotate surface for spinning shapes
+        if self.shape_type in ['circle', 'spiral', 'wave', 'polygon']:
+            surf = pygame.transform.rotate(surf, self.angle)
+
         screen.blit(surf, (self.x - self.size, self.y - self.size))
 
     def draw_circle(self, surf):

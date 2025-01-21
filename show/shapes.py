@@ -7,6 +7,7 @@ import sys
 import math
 from util import BLACK, frequency_to_rgb
 from object.shape import Shape
+from color_music_mapper import ColorSoundMapper
 
 
 sample_Rate = 44100
@@ -16,6 +17,7 @@ volume = 0
 bass, midrange, treble = 0, 0, 0
 dominant_frequency = 0
 shapes = []  # List to store active shapes
+mapped_colors = ColorSoundMapper.create_instances()
 
 def audio_callback(indata, frames, time, status):
     global volume, bass, midrange, treble, dominant_frequency
@@ -42,14 +44,18 @@ def audio_callback(indata, frames, time, status):
 
 # Draw shapes
 def draw_shapes(screen, dt):
-    global shapes, bass, midrange, treble, volume, dominant_frequency
+    global shapes, bass, midrange, treble, volume, dominant_frequency, mapped_colors
     #total_shapes = int((bass + midrange + treble)/2)  # Total number of shapes to create
 
     # Screen dimensions
     #screen_width, screen_height = screen.get_width(), screen.get_height()
 
     # Create new shapes
-    total_shapes = int((bass * 0.1))  # Total number of new shapes to create
+    #total_shapes = int((bass * 0.1))  # Total number of new shapes to create
+    #print (f"bass: {bass}, midrange: {midrange}, treble: {treble}")
+    total_shapes = int(((bass + midrange + treble) * 0.1))  # Total number of new shapes to create
+    if int(total_shapes) == 0:
+        total_shapes = int((bass * 100) + (midrange * 100) + (treble * 100)  * 0.1)
     if len(shapes) + total_shapes <= 900:
         print (f"New shapes: {total_shapes}")
         for _ in range(total_shapes):
@@ -57,7 +63,13 @@ def draw_shapes(screen, dt):
             y = random.randint(0, screen.get_height())
             size = int(volume * 100)  # Scale size with volume
             # Use dominant frequency to determine the color
-            color = frequency_to_rgb(dominant_frequency)
+            #color = frequency_to_rgb(dominant_frequency)
+            #print(f"dominant_frequency: {dominant_frequency}")
+            mapped_color = ColorSoundMapper.find_by_frequency(mapped_colors, dominant_frequency)
+            if mapped_color != None:
+                color = mapped_color.get_rgb()
+            else:
+                color = (255, 255, 255)
             lifetime = random.uniform(1, 3)  # Randomize lifetime
             shapes.append(Shape(x, y, size, color, lifetime, treble, midrange, bass))
 
@@ -66,7 +78,7 @@ def draw_shapes(screen, dt):
     for shape in shapes:
         shape.draw(screen)
 
-    print (f"Alive Shapes: {len(shapes)}")
+    #print (f"Alive Shapes: {len(shapes)}")
 
 # def add_shape(x, y, size, frequency):
 #     """Add a new shape to the shapes list."""
