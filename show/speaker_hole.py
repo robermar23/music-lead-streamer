@@ -6,7 +6,7 @@ import os
 import sys
 import random
 import time
-from object.particle import RingExpandingParticle
+from object.particle import RingCollapsingParticle
 from util import BLACK, PALETTES
 
 # Configuration
@@ -122,9 +122,9 @@ def draw_radial_patterns(screen, selected_palette):
      # Spawn new ring particles based on bass
     for _ in range(ring_particle_count):
         #initial_radius = treble * midrange / 100
-        initial_radius = bass * 0.25
+        initial_radius = min(screen.get_width(), screen.get_height()) / 2  # Start from the screen edge
         #print (f"Initial radius: {initial_radius}")
-        ring_particles.append(RingExpandingParticle(center_x, center_y, color, initial_radius, bass))
+        ring_particles.append(RingCollapsingParticle(center_x, center_y, color, initial_radius, bass))        
 
     # Update and draw ring particles
     for ring in ring_particles[:]:
