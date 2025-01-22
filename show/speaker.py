@@ -69,9 +69,15 @@ def audio_callback(indata, frames, time, status):
         frequency_bands = 0.8 * frequency_bands + 0.2 * band_amplitudes
 
 # Function to draw the speaker tower
-def draw_speaker_tower(screen, center_x, center_y, tower_height):
-    pygame.draw.rect(screen,TOWER_BORDER_COLOR, (center_x - 150, center_y - tower_height // 2, 300, tower_height), 0)
-    pygame.draw.rect(screen, TOWER_BACKGROUND_COLOR, (center_x - 140, center_y - tower_height // 2 + 10, 280, tower_height - 20), 0)
+# def draw_speaker_tower(screen, center_x, center_y, tower_height):
+#     pygame.draw.rect(screen,TOWER_BORDER_COLOR, (center_x - 150, center_y - tower_height // 2, 300, tower_height), 0)
+#     pygame.draw.rect(screen, TOWER_BACKGROUND_COLOR, (center_x - 140, center_y - tower_height // 2 + 10, 280, tower_height - 20), 0)
+# Function to draw the speaker tower
+def draw_speaker_tower(screen, center_x, center_y, tower_width, tower_height):
+    border_width = tower_width * 0.05  # 5% of the tower width
+    pygame.draw.rect(screen, TOWER_BORDER_COLOR, (center_x - tower_width // 2, center_y - tower_height // 2, tower_width, tower_height), 0)
+    pygame.draw.rect(screen, TOWER_BACKGROUND_COLOR, (center_x - tower_width // 2 + border_width, center_y - tower_height // 2 + border_width, tower_width - 2 * border_width, tower_height - 2 * border_width), 0)
+
 
 # Function to draw enhanced speaker cones with dynamic ring colors
 def draw_speaker_cone(screen, center_x, center_y, frequency_response, base_radius, max_displacement, base_color, num_rings=10):
@@ -87,10 +93,30 @@ def draw_speaker_cone(screen, center_x, center_y, frequency_response, base_radiu
     pygame.draw.circle(screen, TOWER_BACKGROUND_COLOR, (center_x, center_y), base_radius - 40 + cone_displacement)
 
 # Function to draw the speakers in a tower
+# def draw_speakers(screen, center_x, center_y, tower_height, bass, midrange, treble, palette):
+#     speaker_spacing = tower_height // 3
+#     half_spacing = speaker_spacing // 2
+#     base_radii = [40, 60, 80]
+#     max_displacements = [half_spacing - base_radii[i] for i in range(3)]
+
+#     speaker_positions = [
+#         center_y - tower_height // 2 + half_spacing,  # Treble
+#         center_y,                                     # Midrange
+#         center_y + tower_height // 2 - half_spacing,  # Bass
+#     ]
+
+#     for i, y in enumerate(speaker_positions):
+#         if i == 0:
+#             draw_speaker_cone(screen, center_x, y, treble, base_radii[i], max_displacements[i], palette[2], num_rings=8)
+#         elif i == 1:
+#             draw_speaker_cone(screen, center_x, y, midrange, base_radii[i], max_displacements[i], palette[1], num_rings=10)
+#         elif i == 2:
+#             draw_speaker_cone(screen, center_x, y, bass, base_radii[i], max_displacements[i], palette[0], num_rings=12)
+# Function to draw the speakers in a tower
 def draw_speakers(screen, center_x, center_y, tower_height, bass, midrange, treble, palette):
     speaker_spacing = tower_height // 3
     half_spacing = speaker_spacing // 2
-    base_radii = [40, 60, 80]
+    base_radii = [tower_height * 0.05, tower_height * 0.08, tower_height * 0.1]  # Scale based on tower height
     max_displacements = [half_spacing - base_radii[i] for i in range(3)]
 
     speaker_positions = [
@@ -101,22 +127,56 @@ def draw_speakers(screen, center_x, center_y, tower_height, bass, midrange, treb
 
     for i, y in enumerate(speaker_positions):
         if i == 0:
-            draw_speaker_cone(screen, center_x, y, treble, base_radii[i], max_displacements[i], palette[2], num_rings=8)
+            draw_speaker_cone(screen, center_x, y, treble, int(base_radii[i]), int(max_displacements[i]), palette[2], num_rings=8)
         elif i == 1:
-            draw_speaker_cone(screen, center_x, y, midrange, base_radii[i], max_displacements[i], palette[1], num_rings=10)
+            draw_speaker_cone(screen, center_x, y, midrange, int(base_radii[i]), int(max_displacements[i]), palette[1], num_rings=10)
         elif i == 2:
-            draw_speaker_cone(screen, center_x, y, bass, base_radii[i], max_displacements[i], palette[0], num_rings=12)
+            draw_speaker_cone(screen, center_x, y, bass, int(base_radii[i]), int(max_displacements[i]), palette[0], num_rings=12)
 
 
 
 # Function to draw the detailed equalizer with extended housing
-def draw_equalizer(screen, center_x, center_y, frequency_bands, left_tower_x, right_tower_x, gap=40):
-    equalizer_height = 300
+# def draw_equalizer(screen, center_x, center_y, frequency_bands, left_tower_x, right_tower_x, gap=40):
+#     equalizer_height = 300
+
+#     # Housing dimensions
+#     housing_x = left_tower_x + 150 + gap  # Start to the right of the left tower
+#     housing_width = (right_tower_x - 150 - gap) - housing_x
+#     housing_height = equalizer_height + 100
+#     housing_y = center_y - housing_height // 2
+
+#     # Draw the housing (outer frame)
+#     pygame.draw.rect(screen, TOWER_BORDER_COLOR, (housing_x, housing_y, housing_width, housing_height), 0)
+#     pygame.draw.rect(screen, TOWER_BACKGROUND_COLOR, (housing_x + 10, housing_y + 10, housing_width - 20, housing_height - 20), 0)
+
+#     if frequency_bands is None or len(frequency_bands) == 0:
+#         return
+
+#     # Draw the bars inside the housing
+#     bar_width = (housing_width - 75) // len(frequency_bands)  # Account for spacing
+#     bar_spacing = 2
+
+#     for i, energy in enumerate(frequency_bands):
+#         # Normalize energy to determine bar height
+#         bar_height = min(equalizer_height, int(np.log1p(energy) * 50))
+#         bar_x = housing_x + 10 + i * (bar_width + bar_spacing)
+#         bar_y = center_y
+
+#         # Gradient colors for the bars
+#         red = 100 + i * 5
+#         green = 200 - i * 8
+#         blue = 100 + i * 10
+#         color = (red % 255, green % 255, blue % 255)
+
+#         pygame.draw.rect(screen, color, (bar_x, bar_y - bar_height // 2, bar_width, bar_height))
+# Function to draw the equalizer with scaling
+def draw_equalizer(screen, center_x, center_y, frequency_bands, left_tower_x, right_tower_x, screen_height, gap=40):
+    equalizer_height = screen_height * 0.3  # 30% of screen height
 
     # Housing dimensions
-    housing_x = left_tower_x + 150 + gap  # Start to the right of the left tower
-    housing_width = (right_tower_x - 150 - gap) - housing_x
-    housing_height = equalizer_height + 100
+    housing_x = left_tower_x + gap  # Start to the right of the left tower
+    housing_width = right_tower_x - housing_x - gap
+    housing_height = equalizer_height + screen_height * 0.1  # Add padding
     housing_y = center_y - housing_height // 2
 
     # Draw the housing (outer frame)
@@ -132,7 +192,7 @@ def draw_equalizer(screen, center_x, center_y, frequency_bands, left_tower_x, ri
 
     for i, energy in enumerate(frequency_bands):
         # Normalize energy to determine bar height
-        bar_height = min(equalizer_height, int(np.log1p(energy) * 50))
+        bar_height = min(equalizer_height, int(np.log1p(energy) * equalizer_height * 0.1))
         bar_x = housing_x + 10 + i * (bar_width + bar_spacing)
         bar_y = center_y
 
@@ -143,6 +203,7 @@ def draw_equalizer(screen, center_x, center_y, frequency_bands, left_tower_x, ri
         color = (red % 255, green % 255, blue % 255)
 
         pygame.draw.rect(screen, color, (bar_x, bar_y - bar_height // 2, bar_width, bar_height))
+
 
 # Function to calculate the gradient color intensity
 def calculate_gradient_color(colors, bass, midrange, treble):
@@ -232,7 +293,8 @@ def render_step(screen):
     screen.fill(BLACK)
 
     screen_width, screen_height = screen.get_width(), screen.get_height()
-    tower_height = 900
+    tower_height = int(screen_height * 0.8)  # Towers occupy 80% of the screen height
+    tower_width = int(screen_width * 0.1)   # Towers occupy 10% of the screen width
 
     # Handle palette switching and fading
     switch_palette()
@@ -245,18 +307,30 @@ def render_step(screen):
     # Draw gradient background     
     draw_gradient_background(screen, screen_width, screen_height, current_palette)
 
-    # Left tower
+    # # Left tower
+    # left_tower_x = screen_width // 4
+    # draw_speaker_tower(screen, screen_width // 4, screen_height // 2, tower_height)
+    # draw_speakers(screen, screen_width // 4, screen_height // 2, tower_height, bass, midrange, treble, current_palette)
+
+    # # Right tower
+    # right_tower_x = 3 * screen_width // 4
+    # draw_speaker_tower(screen, 3 * screen_width // 4, screen_height // 2, tower_height)
+    # draw_speakers(screen, 3 * screen_width // 4, screen_height // 2, tower_height, bass, midrange, treble, current_palette)
+     # Left tower
     left_tower_x = screen_width // 4
-    draw_speaker_tower(screen, screen_width // 4, screen_height // 2, tower_height)
-    draw_speakers(screen, screen_width // 4, screen_height // 2, tower_height, bass, midrange, treble, current_palette)
+    draw_speaker_tower(screen, left_tower_x, screen_height // 2, tower_width, tower_height)
+    draw_speakers(screen, left_tower_x, screen_height // 2, tower_height, bass, midrange, treble, current_palette)
 
     # Right tower
     right_tower_x = 3 * screen_width // 4
-    draw_speaker_tower(screen, 3 * screen_width // 4, screen_height // 2, tower_height)
-    draw_speakers(screen, 3 * screen_width // 4, screen_height // 2, tower_height, bass, midrange, treble, current_palette)
+    draw_speaker_tower(screen, right_tower_x, screen_height // 2, tower_width, tower_height)
+    draw_speakers(screen, right_tower_x, screen_height // 2, tower_height, bass, midrange, treble, current_palette)
+
+    # Equalizer
+    draw_equalizer(screen, screen_width // 2, screen_height // 2, frequency_bands, left_tower_x, right_tower_x, screen_height, gap=50)
 
      # Equalizer
-    draw_equalizer(screen, screen_width // 2, screen_height // 2, frequency_bands, left_tower_x, right_tower_x, gap=50)
+    #draw_equalizer(screen, screen_width // 2, screen_height // 2, frequency_bands, left_tower_x, right_tower_x, gap=50)
 
     pygame.display.update()
 
