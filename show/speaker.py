@@ -294,7 +294,7 @@ def render_step(screen):
 
     screen_width, screen_height = screen.get_width(), screen.get_height()
     tower_height = int(screen_height * 0.8)  # Towers occupy 80% of the screen height
-    tower_width = int(screen_width * 0.1)   # Towers occupy 10% of the screen width
+    tower_width = int(screen_width * 0.2)   # Towers occupy 10% of the screen width
 
     # Handle palette switching and fading
     switch_palette()
