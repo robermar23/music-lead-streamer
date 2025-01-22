@@ -126,7 +126,7 @@ def draw_gradient_background(screen, width, height, colors):
 # Global state for the show
 def initialize(audio_settings, screen):
     """Initialize the show."""
-    global audio_stream, selected_palette
+    global audio_stream, selected_palette, sample_rate
     
     # Extract audio settings
     samplerate, channels, device_index, blocksize, latency = audio_settings

@@ -46,6 +46,7 @@ def switch_palette(selected_palette):
     if time.time() - last_palette_switch > 30:
         selected_palette = random.choice(list(PALETTES.values()))
         last_palette_switch = time.time()
+    return selected_palette
 
 def draw_palette_name(screen, selected_palette):
     font = pygame.font.SysFont(None, 36)
@@ -90,7 +91,9 @@ def draw_radial_patterns(screen, selected_palette):
    # Spawn new stars based on bass, midrange, and treble
     if bass > 0:
         for _ in range(int(bass / 2)):
-            size = random.randint(2, 10)
+            #size = random.randint(2, 10)
+            size = max(5, int((treble + midrange) * 2))
+            print (f"Size: {size}")
             stars.append(Star(center_x, center_y, color, size, midrange, treble))
 
     # Update and draw stars
@@ -102,21 +105,33 @@ def draw_radial_patterns(screen, selected_palette):
 
 
 def get_smooth_color(selected_palette, bass, midrange, treble, max_volume=1):
-    """Generates a color based on frequency bands and the selected palette."""
+    """Generates a vibrant color based on frequency bands and the selected palette."""
     # Normalize each frequency band relative to max volume
-    bass_norm = min(1, bass / max_volume)
-    midrange_norm = min(1, midrange / max_volume)
-    treble_norm = min(1, treble / max_volume)
+    bass_norm = bass / max_volume
+    midrange_norm = midrange / max_volume
+    treble_norm = treble / max_volume
+
+    # Apply a weighting factor to enhance vibrancy
+    bass_weight = bass_norm**2
+    midrange_weight = midrange_norm**2
+    treble_weight = treble_norm**2
+
+    # Normalize weights to sum up to 1
+    total_weight = bass_weight + midrange_weight + treble_weight
+    if total_weight > 0:
+        bass_weight /= total_weight
+        midrange_weight /= total_weight
+        treble_weight /= total_weight
 
     # Get colors from the selected palette
     color_bass = selected_palette[0]
     color_mid = selected_palette[1]
     color_treble = selected_palette[2]
 
-    # Interpolate between the colors based on frequency bands
-    red = int(bass_norm * color_bass[0] + midrange_norm * color_mid[0] + treble_norm * color_treble[0])
-    green = int(bass_norm * color_bass[1] + midrange_norm * color_mid[1] + treble_norm * color_treble[1])
-    blue = int(bass_norm * color_bass[2] + midrange_norm * color_mid[2] + treble_norm * color_treble[2])
+    # Interpolate between the colors based on adjusted weights
+    red = int(bass_weight * color_bass[0] + midrange_weight * color_mid[0] + treble_weight * color_treble[0])
+    green = int(bass_weight * color_bass[1] + midrange_weight * color_mid[1] + treble_weight * color_treble[1])
+    blue = int(bass_weight * color_bass[2] + midrange_weight * color_mid[2] + treble_weight * color_treble[2])
 
     # Clamp values to ensure valid RGB values
     return (
@@ -125,10 +140,19 @@ def get_smooth_color(selected_palette, bass, midrange, treble, max_volume=1):
         max(0, min(255, blue)),
     )
 
+# Function to draw the gradient background
+def draw_gradient_background(screen, width, height, colors):
+    for y in range(height):
+        t = y / height
+        r = int(colors[0][0] * (1 - t) + colors[1][0] * t)
+        g = int(colors[0][1] * (1 - t) + colors[1][1] * t)
+        b = int(colors[0][2] * (1 - t) + colors[1][2] * t)
+        pygame.draw.line(screen, (r, g, b), (0, y), (width, y))
+        
 # Global state for the show
 def initialize(audio_settings, screen):
     """Initialize the show."""
-    global audio_stream, selected_palette
+    global audio_stream, selected_palette, sample_rate
     
     # Extract audio settings
     samplerate, channels, device_index, blocksize, latency = audio_settings
@@ -153,9 +177,14 @@ def render_step(screen):
     """Render a single frame of the visualization."""
     screen.fill(BLACK)
 
+    global selected_palette
+
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+    draw_gradient_background(screen, screen_width, screen_height, selected_palette)
+
     draw_radial_patterns(screen, selected_palette)
 
-    switch_palette(selected_palette)
+    selected_palette = switch_palette(selected_palette)
 
     draw_palette_name(screen, selected_palette)
 
