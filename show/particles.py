@@ -51,29 +51,6 @@ def draw_palette_name(screen, selected_palette):
     text = font.render(f"Palette: {list(PALETTES.keys())[list(PALETTES.values()).index(selected_palette)]}", True, (255, 255, 255))
     screen.blit(text, (10, 10))
 
-# def get_smooth_color(selected_palette, bass, midrange, treble, max_volume=1):
-#     """Generates a color based on frequency bands and the selected palette."""
-#     # Normalize each frequency band relative to max volume
-#     bass_norm = min(1, bass / max_volume)
-#     midrange_norm = min(1, midrange / max_volume)
-#     treble_norm = min(1, treble / max_volume)
-
-#     # Get colors from the selected palette
-#     color_bass = selected_palette[0]
-#     color_mid = selected_palette[1]
-#     color_treble = selected_palette[2]
-
-#     # Interpolate between the colors based on frequency bands
-#     red = int(bass_norm * color_bass[0] + midrange_norm * color_mid[0] + treble_norm * color_treble[0])
-#     green = int(bass_norm * color_bass[1] + midrange_norm * color_mid[1] + treble_norm * color_treble[1])
-#     blue = int(bass_norm * color_bass[2] + midrange_norm * color_mid[2] + treble_norm * color_treble[2])
-
-#     # Clamp values to ensure valid RGB values
-#     return (
-#         max(0, min(255, red)),
-#         max(0, min(255, green)),
-#         max(0, min(255, blue)),
-#     )
 def get_smooth_color(selected_palette, bass, midrange, treble, max_volume=1):
     """Generates a vibrant color based on frequency bands and the selected palette."""
     # Normalize each frequency band relative to max volume
@@ -104,7 +81,6 @@ def get_smooth_color(selected_palette, bass, midrange, treble, max_volume=1):
     blue = int(bass_weight * color_bass[2] + midrange_weight * color_mid[2] + treble_weight * color_treble[2])
 
     # Clamp values to ensure valid RGB values
-    print (red, green, blue)
     return (
         max(0, min(255, red)),
         max(0, min(255, green)),
@@ -138,30 +114,14 @@ def draw_radial_patterns(screen, selected_palette):
         if not particle.is_alive():
             particles.remove(particle)
 
-
-# def get_smooth_color(selected_palette, bass, midrange, treble, max_volume=1):
-#     """Generates a color based on frequency bands and the selected palette."""
-#     # Normalize each frequency band relative to max volume
-#     bass_norm = min(1, bass / max_volume)
-#     midrange_norm = min(1, midrange / max_volume)
-#     treble_norm = min(1, treble / max_volume)
-
-#     # Get colors from the selected palette
-#     color_bass = selected_palette[0]
-#     color_mid = selected_palette[1]
-#     color_treble = selected_palette[2]
-
-#     # Interpolate between the colors based on frequency bands
-#     red = int(bass_norm * color_bass[0] + midrange_norm * color_mid[0] + treble_norm * color_treble[0])
-#     green = int(bass_norm * color_bass[1] + midrange_norm * color_mid[1] + treble_norm * color_treble[1])
-#     blue = int(bass_norm * color_bass[2] + midrange_norm * color_mid[2] + treble_norm * color_treble[2])
-
-#     # Clamp values to ensure valid RGB values
-#     return (
-#         max(0, min(255, red)),
-#         max(0, min(255, green)),
-#         max(0, min(255, blue)),
-#     )
+# Function to draw the gradient background
+def draw_gradient_background(screen, width, height, colors):
+    for y in range(height):
+        t = y / height
+        r = int(colors[0][0] * (1 - t) + colors[1][0] * t)
+        g = int(colors[0][1] * (1 - t) + colors[1][1] * t)
+        b = int(colors[0][2] * (1 - t) + colors[1][2] * t)
+        pygame.draw.line(screen, (r, g, b), (0, y), (width, y))
 
 # Global state for the show
 def initialize(audio_settings, screen):
@@ -193,6 +153,9 @@ def render_step(screen):
     global selected_palette
 
     screen.fill(BLACK)
+
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+    draw_gradient_background(screen, screen_width, screen_height, selected_palette)
 
     draw_radial_patterns(screen, selected_palette)
 

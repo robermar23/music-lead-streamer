@@ -11,7 +11,7 @@ class Particle:
         self.speed_x = random.uniform(-1, 1) * (1 + midrange * 2 + treble * 0.5)  # Speed influenced by midrange and treble
         self.speed_y = random.uniform(-1, 1) * (1 + midrange * 2 + treble * 0.5)
         # self.speed_y = speed_y
-        self.life = 50  # Particle lifespan (affects fading)
+        self.life = 75  # Particle lifespan (affects fading)
 
     def move(self):
         """Move the particle based on its speed."""
