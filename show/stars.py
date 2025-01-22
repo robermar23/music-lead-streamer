@@ -6,43 +6,18 @@ import os
 import sys
 import random
 import time
-from object.particle import Particle, RingParticle
-from util import BLACK
+from object.star import Star
+from util import BLACK, PALETTES
 
 # Configuration
 sample_rate = 44100
 volume = 0
 bass, midrange, treble = 0, 0, 0
-particles = []
-ring_particles = []
+stars = []
 max_volume = 1
 
 # Switch palette every 10 seconds
 last_palette_switch = time.time()
-
-# Define 5 custom color palettes
-PALETTES = {
-    "Neon Glow": [(255, 0, 255), (0, 255, 255), (255, 255, 0)],
-    "Pastel Dream": [(255, 182, 193), (176, 224, 230), (221, 160, 221)],
-    "Fire & Ice": [(255, 69, 0), (0, 191, 255), (255, 140, 0)],
-    "Galaxy": [(72, 61, 139), (123, 104, 238), (25, 25, 112)],
-    "Cyberpunk": [(255, 20, 147), (0, 255, 127), (75, 0, 130)],
-    "Sunset Bliss": [(255, 94, 77), (255, 165, 0), (138, 43, 226)],
-    "Arctic Chill": [(173, 216, 230), (0, 0, 139), (0, 128, 128)],
-    "Retro Pop": [(255, 20, 147), (50, 205, 50), (255, 255, 0)],
-    "Deep Space": [(0, 0, 0), (48, 25, 52), (255, 0, 255)],
-    "Forest Mist": [(34, 139, 34), (144, 238, 144), (139, 69, 19)],
-    "Tropical Sunset": [(255, 87, 51), (255, 195, 113), (255, 87, 159)],
-    "Ocean Breeze": [(0, 128, 128), (0, 191, 255), (64, 224, 208)],
-    "Autumn Forest": [(139, 69, 19), (205, 133, 63), (85, 107, 47)],
-    "Electric Storm": [(25, 25, 112), (138, 43, 226), (255, 255, 0)],
-    "Candy Pop": [(255, 105, 180), (135, 206, 250), (255, 182, 193)],
-    "Volcano Blast": [(255, 69, 0), (255, 140, 0), (255, 215, 0)],
-    "Cosmic Dream": [(18, 10, 143), (75, 0, 130), (139, 0, 139)],
-    "Monochrome Fade": [(0, 0, 0), (128, 128, 128), (255, 255, 255)],
-    "Techno Pulse": [(0, 255, 0), (0, 255, 255), (255, 20, 147)],
-    "Desert Glow": [(210, 180, 140), (244, 164, 96), (70, 130, 180)],
-}
 
 # Audio callback
 def audio_callback(indata, frames, time, status):
@@ -71,7 +46,6 @@ def switch_palette(selected_palette):
     if time.time() - last_palette_switch > 30:
         selected_palette = random.choice(list(PALETTES.values()))
         last_palette_switch = time.time()
-        return selected_palette
 
 def draw_palette_name(screen, selected_palette):
     font = pygame.font.SysFont(None, 36)
@@ -113,21 +87,18 @@ def draw_radial_patterns(screen, selected_palette):
     # Center of the screen
     center_x, center_y = screen.get_width() // 2, screen.get_height() // 2
 
-    # PARTICLES #
-     # Spawn new particles based on bass
-    for _ in range(int(bass * 1)):
-        size = random.randint(2, 5)
-        #speed_x = random.uniform(-2, 2)
-        #speed_y = random.uniform(-2, 2)
-        #particles.append(Particle(center_x, center_y, color, size, speed_x, speed_y))
-        particles.append(Particle(center_x, center_y, color, size, midrange, treble))
+   # Spawn new stars based on bass, midrange, and treble
+    if bass > 0:
+        for _ in range(int(bass / 2)):
+            size = random.randint(2, 10)
+            stars.append(Star(center_x, center_y, color, size, midrange, treble))
 
-    # Update and draw particles
-    for particle in particles[:]:
-        particle.move()
-        particle.draw(screen)
-        if not particle.is_alive():
-            particles.remove(particle)
+    # Update and draw stars
+    for star in stars[:]:
+        star.move()
+        star.draw(screen)
+        if not star.is_alive():
+            stars.remove(star)
 
 
 def get_smooth_color(selected_palette, bass, midrange, treble, max_volume=1):
@@ -189,8 +160,7 @@ def render_step(screen):
     draw_palette_name(screen, selected_palette)
 
     pygame.display.update()
-
-    pygame.time.wait(10)
+    #pygame.time.wait(10)
 
 def cleanup():
     """Clean up resources for the show."""

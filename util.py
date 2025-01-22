@@ -65,7 +65,7 @@ def setup_display(display: str, video_driver: str, screen_width: int, screen_hei
         pygame.font.init()
         pygame.display.update()
     elif platform.startswith("win"):
-        print("Running on Windows")
+        print("Running on Windows, using sdl2")
         os.putenv("SDL_VIDEODRIVER", "")
         pygame.display.init()
         # Get screen resolution of the selected display
