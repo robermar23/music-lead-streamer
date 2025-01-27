@@ -93,7 +93,6 @@ def draw_radial_patterns(screen, selected_palette):
         for _ in range(int(bass / 2)):
             #size = random.randint(2, 10)
             size = max(5, int((treble + midrange) * 2))
-            print (f"Size: {size}")
             stars.append(Star(center_x, center_y, color, size, midrange, treble))
 
     # Update and draw stars
