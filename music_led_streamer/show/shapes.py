@@ -57,7 +57,6 @@ def draw_shapes(screen, dt):
     if int(total_shapes) == 0:
         total_shapes = int((bass * 100) + (midrange * 100) + (treble * 100)  * 0.1)
     if len(shapes) + total_shapes <= 900:
-        print (f"New shapes: {total_shapes}")
         for _ in range(total_shapes):
             x = random.randint(0, screen.get_width())
             y = random.randint(0, screen.get_height())

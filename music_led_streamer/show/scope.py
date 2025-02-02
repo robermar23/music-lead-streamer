@@ -91,14 +91,19 @@ def draw_kaleidoscope(screen, bass, midrange, treble):
             brightness = bass * math.sin(pygame.time.get_ticks() / 500 + row + col)
 
             # Color based on audio
-            hue = treble 
-            saturation = 1  # Full saturation
-            # Convert HSV to RGB
-            rgb = colorsys.hsv_to_rgb(hue, saturation, brightness)
-            color = tuple(int(c * 255) for c in rgb)  # Scale to [0, 255]
+            # Ensure hue is within the valid range
+            hue = max(0, min(1, treble / 10))  # Normalize treble to a range of [0,1]
+            saturation = 1  
 
-            # Generate glow color with reduced brightness
-            glow_brightness = brightness * 0.5
+            # Ensure brightness stays within [0,1]
+            brightness = max(0, min(1, bass * abs(math.sin(pygame.time.get_ticks() / 500 + row + col))))
+
+            # Convert HSV to RGB and scale to [0, 255]
+            rgb = colorsys.hsv_to_rgb(hue, saturation, brightness)
+            color = tuple(int(c * 255) for c in rgb)
+
+            # Ensure glow brightness is also valid
+            glow_brightness = max(0, min(1, brightness * 0.5))
             glow_rgb = colorsys.hsv_to_rgb(hue, saturation, glow_brightness)
             glow_color = tuple(int(c * 255) for c in glow_rgb)
 
