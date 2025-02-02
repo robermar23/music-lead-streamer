@@ -2,11 +2,12 @@ import typer
 import importlib
 import pygame
 import time
-import threading
-from pathlib import Path
-from util import get_shows, setup_display, SHOWS_PATH
+from music_led_streamer.util import get_shows, setup_display, SHOWS_PATH, load_config
 
 app = typer.Typer()
+
+# Global variable to store config path
+config_path = None
 
 @app.command()
 def list_shows():
@@ -26,7 +27,7 @@ def list_shows():
 
 @app.command()
 def run(
-    show: str,
+    show: str = typer.Argument("stars", help="Show to run (e.g., 'stars, bubbles, shapes, etc.')"),
     display: str = typer.Argument(":0", help="Display to run the show on (e.g., ':0')"),
     video_driver: str = typer.Argument("x11", help="Video driver to use (e.g., 'x11')"),
     screen_width: int = typer.Argument(800, help="Screen width (e.g., 800)"),
@@ -43,13 +44,14 @@ def run(
     # Set up display
     screen = setup_display(display, video_driver, screen_width, screen_height)
     pygame.display.set_caption(f"Running Show: {show}")
+    show_module = None
 
     # Shared audio settings
     audio_settings = (samplerate, channels, device_index, blocksize, latency)
 
     try:
         # Import the selected show
-        show_module = importlib.import_module(f"show.{show}")
+        show_module = importlib.import_module(f"music_led_streamer.show.{show}")
 
         # Initialize the show
         if hasattr(show_module, "initialize"):
@@ -127,7 +129,7 @@ def rotate(
         if show_module and hasattr(show_module, "cleanup"):
             show_module.cleanup()  # Clean up the previous show
         show_name = shows[index]
-        show_module = importlib.import_module(f"show.{show_name}")
+        show_module = importlib.import_module(f"music_led_streamer.show.{show_name}")
         if hasattr(show_module, "initialize"):
             show_module.initialize(audio_settings, screen)
 
@@ -168,7 +170,54 @@ def rotate(
         show_module.cleanup()
     pygame.quit()
 
+def config():
+    """Default command function if no command is provided."""
+    print("No command provided. Looking for available configuration file...")
+
+    config = load_config(config_path)
+    if config:
+        print(f"Configuration found: {config}")
+        if config["command"] == "run":
+            run(show=config["show"], 
+                      display=config["display"], 
+                      video_driver=config["video_driver"], 
+                      screen_width=config["screen_width"], 
+                      screen_height=config["screen_height"], 
+                      samplerate=config["samplerate"], 
+                      channels=config["channels"], 
+                      device_index=config["device_index"], 
+                      blocksize=config["blocksize"], 
+                      latency=config["latency"]
+                    )
+        elif config["command"] == "rotate":
+            rotate(display=config["display"], 
+                      video_driver=config["video_driver"], 
+                      screen_width=config["screen_width"], 
+                      screen_height=config["screen_height"], 
+                      samplerate=config["samplerate"], 
+                      channels=config["channels"], 
+                      device_index=config["device_index"], 
+                      blocksize=config["blocksize"], 
+                      latency=config["latency"],
+                      timer=config["timer"]
+                    )
+    else:
+        print("No configuration found. Will 'run` with defaults...")
+        typer.run(run)
+
+@app.callback(invoke_without_command=True)
+def main(config_file: str = None):
+    """Global option to define a custom configuration file."""
+    global config_path
+    print(f"Accepting config path: {config}")
+    config_path = config  # Store in global variable
 
 if __name__ == "__main__":
-    app()
+    import sys
+    print (str(len(sys.argv)))
+
+    if len(sys.argv) == 1 or len(sys.argv) == 3:
+        config()
+    else:
+        app()
 

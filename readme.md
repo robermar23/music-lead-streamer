@@ -87,3 +87,39 @@ You should see an entry like this:
 ```
 card 0: Loopback [Loopback], device 0: Loopback PCM [Loopback PCM]
 ```
+
+Example compiled command on windows
+
+```shell
+dist/MusicLEDStreamer.exe run stars 1 directx 1080 1920 44100 2 39
+```
+
+- command: run
+- show: stars
+- display: 1
+- video_driver: directx
+- screen_width: 1080
+- screen_height: 1920
+- samplerate: 44100
+- channels: 2
+- device_index: 39
+- blocksize: default of 1024
+- latency: default of 0.1
+
+Example compiled command on linux
+
+```shell
+dist/MusicLEDStreamer.exe run stars 1 directx 1080 1920 44100 2 39
+```
+
+- command: run
+- show: stars
+- display: :0 (default displayh)
+- video_driver: x11
+- screen_width: 800
+- screen_height: 600
+- samplerate: 44100
+- channels: 2
+- device_index: 1
+- blocksize: default of 1024
+- latency: default of 0.1

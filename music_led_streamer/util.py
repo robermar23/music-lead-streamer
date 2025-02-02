@@ -1,6 +1,7 @@
 import os
 import sys
 import pygame
+import json
 from pathlib import Path
 
 # Constants
@@ -43,6 +44,20 @@ screen = None
 
 # Path to the "shows" directory, which we load dynamically
 SHOWS_PATH = Path(__file__).parent / "show"
+CONFIG_FILENAME = "MusicLEDStreamer.json"
+
+def load_config(config_file_location: str):
+    """Load configuration from a JSON file if it exists."""
+    if config_file_location is not None:
+        config_path = config_file_location
+    else:
+        config_path = os.path.join(os.path.dirname(__file__), CONFIG_FILENAME)
+
+    print(f"Looking for configuration from: {config_path}")
+    if os.path.exists(config_path):
+        with open(config_path, "r") as file:
+            return json.load(file)  # Load JSON into dictionary
+    return None
 
 def setup_display(display: str, video_driver: str, screen_width: int, screen_height: int):
     """
@@ -72,7 +87,15 @@ def setup_display(display: str, video_driver: str, screen_width: int, screen_hei
         display_info = pygame.display.Info()
         #print(f"Display info: {display_info}")
         width = display_info.current_w
-        display_index = int(display)
+
+        #in case of multiple displays, we need to know which one to use
+        # Display index is 0 by default
+        try:
+            display_index = int(display)
+        except ValueError:
+            # in case non numeric/non windows value is passed from defaults or by accident
+            display_index = 0
+        
         # Position the window manually to support 2 displays atm
         if display_index == 1:  # Second monitor
             os.environ['SDL_VIDEO_WINDOW_POS'] = f"{width},0"  # Place at the start of the second screen

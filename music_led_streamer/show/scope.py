@@ -5,7 +5,7 @@ import random
 import time
 import colorsys
 import math
-from util import BLACK, PALETTES
+from music_led_streamer.util import BLACK, PALETTES
 
 # Constants
 sample_rate = 44100

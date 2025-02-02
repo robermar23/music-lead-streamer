@@ -5,9 +5,9 @@ import random
 import os
 import sys
 import math
-from util import BLACK, frequency_to_rgb
-from object.shape import Shape
-from color_music_mapper import ColorSoundMapper
+from music_led_streamer.util import BLACK, frequency_to_rgb
+from music_led_streamer.object.shape import Shape
+from music_led_streamer.color_music_mapper import ColorSoundMapper
 
 
 sample_Rate = 44100

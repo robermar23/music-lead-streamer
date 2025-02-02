@@ -1,0 +1,14 @@
+{
+  "command": "run",
+  "show": "scope",
+  "display": "0",
+  "video_driver": "directx",
+  "screen_width": 3440,
+  "screen_height": 1440,
+  "samplerate": 44100,
+  "channels": 2,
+  "device_index": 39,
+  "blocksize": 1024,
+  "latency": 0.0,
+  "timer": 30
+}

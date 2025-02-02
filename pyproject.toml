@@ -3,18 +3,26 @@ name = "music-led-streamer"
 version = "0.1.0"
 description = ""
 authors = ["Robert Evans <robermar2@gmail.com>"]
-readme = "README.md"
+readme = "readme.md"
 packages = [{include = "music_led_streamer"}]
+scripts = {music-led-streamer = "music_led_streamer.__main__:app"}
+package-mode = true
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.14"
 numpy = "^2.2.1"
-
 sounddevice = "^0.5.1"
 pygame = "^2.6.1"
 typer = "^0.15.1"
-
+build = "^1.2.2.post1"
+pyinstaller = "^6.11.1"
+pyinstaller-versionfile = "^3.0.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.setuptools]
+packages = ["music_led_streamer"]
+include-package-data = true

@@ -3,7 +3,7 @@ import sounddevice as sd
 import numpy as np
 import time
 import random
-from util import BLACK, PALETTES
+from music_led_streamer.util import BLACK, PALETTES
 
 # Configuration
 sample_rate = 44100

@@ -1,7 +1,7 @@
 import pygame
 import random
 import math
-from util import hsv_to_rgb
+from music_led_streamer.util import hsv_to_rgb
 
 # Shape Class
 class Shape:

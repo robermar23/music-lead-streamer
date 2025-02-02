@@ -6,8 +6,8 @@ import os
 import sys
 import random
 import time
-from object.bubble import Bubble
-from util import BLACK
+from music_led_streamer.object.bubble import Bubble
+from music_led_streamer.util import BLACK
 
 # Configuration
 sample_rate = 44100
