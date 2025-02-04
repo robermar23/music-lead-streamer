@@ -3,8 +3,6 @@ import sounddevice as sd
 import numpy as np
 import random
 import time
-import colorsys
-import math
 from music_led_streamer.util import BLACK, PALETTES
 
 # Constants
@@ -13,11 +11,14 @@ volume = 0
 max_volume = 0
 bass, midrange, treble = 0, 0, 0
 
-NUM_SLICES = 8  # Number of slices in the kaleidoscope
-TRIANGLE_SIZE = 50  # Size of the equilateral triangles
-
 # Switch palette every 10 seconds
 last_palette_switch = time.time()
+
+# Global rotation factor to keep rotation smooth over time
+global_rotation = 0
+max_radius = 0
+previous_sub_segments = 5  # Keep track of previous segments to smooth changes
+previous_scale = 1
 
 # Audio callback
 def audio_callback(indata, frames, time, status):
@@ -41,81 +42,102 @@ def audio_callback(indata, frames, time, status):
         midrange = np.mean(fft_data[(freqs >= 250) & (freqs < 4000)])
         treble = np.mean(fft_data[(freqs >= 4000)])
 
-# Draw a Single Triangle
-def draw_triangle(surface, x, y, size, orientation, color, glow_color=None):
-    """Draw a single triangle with optional glow effect."""
-    if glow_color:
-        for i in range(4, 0, -1):  # Draw larger, semi-transparent triangles for glow
-            alpha = int(255 * (i / 4))  # Fade glow layers
-            glow_surface = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
-            pygame.draw.polygon(
-                glow_surface, (*glow_color, alpha),
-                [(x - size / 2 * i, y + size * math.sqrt(3) / 2 * i),
-                 (x, y - size * math.sqrt(3) / 2 * i),
-                 (x + size / 2 * i, y + size * math.sqrt(3) / 2 * i)]
-            )
-            surface.blit(glow_surface, (x - size, y - size))
+def switch_palette(selected_palette):
+    global last_palette_switch
+    if time.time() - last_palette_switch > 30:
+        selected_palette = random.choice(list(PALETTES.values()))
+        last_palette_switch = time.time()
+    return selected_palette
 
-    # Draw the triangle itself
-    points = [
-        (x, y),
-        (x + size / 2, y + size * math.sqrt(3) / 2) if orientation == 'up' else (x + size / 2, y - size * math.sqrt(3) / 2),
-        (x - size / 2, y + size * math.sqrt(3) / 2) if orientation == 'up' else (x - size / 2, y - size * math.sqrt(3) / 2)
+def draw_palette_name(screen, selected_palette):
+    font = pygame.font.SysFont(None, 36)
+    text = font.render(f"Palette: {list(PALETTES.keys())[list(PALETTES.values()).index(selected_palette)]}", True, (255, 255, 255))
+    screen.blit(text, (10, 10))
+
+def lerp_color(color1, color2, t):
+    """Linear interpolate between two colors."""
+    return (
+        int(color1[0] + (color2[0] - color1[0]) * t),
+        int(color1[1] + (color2[1] - color1[1]) * t),
+        int(color1[2] + (color2[2] - color1[2]) * t),
+    )
+
+def draw_gradient_triangle(surface, points, color1, color2):
+    temp_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    points = sorted(points, key=lambda p: p[1])
+    top, mid, bot = points
+
+    for y in range(top[1], bot[1] + 1):
+        if y < mid[1]:
+            t = (y - top[1]) / max(1, mid[1] - top[1])
+            x1 = int(top[0] + (mid[0] - top[0]) * t)
+            x2 = int(top[0] + (bot[0] - top[0]) * ((y - top[1]) / max(1, bot[1] - top[1])))
+        else:
+            t = (y - mid[1]) / max(1, bot[1] - mid[1])
+            x1 = int(mid[0] + (bot[0] - mid[0]) * t)
+            x2 = int(top[0] + (bot[0] - top[0]) * ((y - top[1]) / max(1, bot[1] - top[1])))
+
+        if x1 > x2:
+            x1, x2 = x2, x1
+
+        blended_color = lerp_color(color1, color2, (y - top[1]) / max(1, bot[1] - top[1])) + (200,)
+        pygame.draw.line(temp_surface, blended_color, (x1, y), (x2, y))
+
+    pygame.draw.polygon(temp_surface, color2, points, 1)
+    surface.blit(temp_surface, (0, 0))
+
+def draw_kaleidoscope(screen, bass, midrange, treble, selected_palette):
+    global global_rotation, max_radius, previous_sub_segments, previous_scale
+
+    width, height = screen.get_size()
+    center = (width // 2, height // 2)
+    max_radius = min(width, height) // 2
+
+    # Rotation reacts to treble
+    treble_effect = max(0.1, treble)  # Prevents excessive speed
+    global_rotation += (np.pi / 240) + (treble_effect * np.pi / 120)
+
+    # Number of segments depends on midrange
+    num_segments = max(1, int(midrange))  # Ensures at least 5
+    if num_segments <= 0:
+        num_segments = 2
+
+    # *Bass controls pulsing scale
+    new_scale_factor = bass * 0.015
+    scale_factor = 0.8 * previous_scale + 0.2 * new_scale_factor
+    if scale_factor <= 0:
+        scale_factor = 1
+    previous_scale = scale_factor
+
+    #print (f"num_segments: {num_segments}")
+    print (f"global_rotation: {global_rotation}, scale_factor: {scale_factor}")
+    #print (f"bass: {bass}, midrange: {midrange}, treble: {treble}")
+
+    base_points = [
+        (0, -max_radius),
+        (max_radius * np.sin(np.pi / num_segments), max_radius * np.cos(np.pi / num_segments)),
+        (-max_radius * np.sin(np.pi / num_segments), max_radius * np.cos(np.pi / num_segments)),
     ]
-    pygame.draw.polygon(surface, color, points)
+    
+    for i in range(num_segments):
+        angle = i * (2 * np.pi / num_segments) + global_rotation
 
+        rotated_points = [
+            (
+                int(center[0] + (x * np.cos(angle) - y * np.sin(angle)) * scale_factor),
+                int(center[1] + (x * np.sin(angle) + y * np.cos(angle)) * scale_factor),
+            )
+            for x, y in base_points
+        ]
 
-# Draw Kaleidoscope
-def draw_kaleidoscope(screen, bass, midrange, treble):
-    """Draw the kaleidoscope with a tessellated triangle grid."""
-    screen_width = screen.get_width()
-    screen_height = screen.get_height()
-    base_surface = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
-    height = TRIANGLE_SIZE * math.sqrt(3) / 2
-    num_rows = int(screen_height / height) + 1
-    num_cols = int(screen_width / TRIANGLE_SIZE) + 1
+        color_index = i % len(selected_palette)
+        base_color = selected_palette[color_index]
+        highlight_color = lerp_color(base_color, (255, 255, 255), 0.5)
 
-    for row in range(num_rows):
-        for col in range(num_cols):
-            # Position of the triangle
-            x = col * TRIANGLE_SIZE
-            y = row * height
-            if row % 2 == 1:
-                x += TRIANGLE_SIZE / 2  # Offset every other row
+        draw_gradient_triangle(screen, rotated_points, base_color, highlight_color)
 
-            # Triangle orientation
-            orientation = 'up' if (row + col) % 2 == 0 else 'down'
-
-            # Smooth fading effect for brightness
-            #brightness = 0.5 + 0.5 * math.sin(pygame.time.get_ticks() / 500 + row + col)
-            brightness = bass * math.sin(pygame.time.get_ticks() / 500 + row + col)
-
-            # Color based on audio
-            # Ensure hue is within the valid range
-            hue = max(0, min(1, treble / 10))  # Normalize treble to a range of [0,1]
-            saturation = 1  
-
-            # Ensure brightness stays within [0,1]
-            brightness = max(0, min(1, bass * abs(math.sin(pygame.time.get_ticks() / 500 + row + col))))
-
-            # Convert HSV to RGB and scale to [0, 255]
-            rgb = colorsys.hsv_to_rgb(hue, saturation, brightness)
-            color = tuple(int(c * 255) for c in rgb)
-
-            # Ensure glow brightness is also valid
-            glow_brightness = max(0, min(1, brightness * 0.5))
-            glow_rgb = colorsys.hsv_to_rgb(hue, saturation, glow_brightness)
-            glow_color = tuple(int(c * 255) for c in glow_rgb)
-
-            # Draw triangle with glow
-            draw_triangle(base_surface, x, y, TRIANGLE_SIZE, orientation, color, glow_color)
-
-    # Symmetry: Create kaleidoscope slices
-    for i in range(NUM_SLICES):
-        angle = i * (360 / NUM_SLICES)
-        rotated_surface = pygame.transform.rotate(base_surface, angle)
-        screen.blit(rotated_surface, (0, 0))
-
+    flipped_surface = pygame.transform.flip(screen, True, False)
+    screen.blit(flipped_surface, (0, 0))
 
 # Global state for the show
 def initialize(audio_settings, screen):
@@ -149,12 +171,14 @@ def render_step(screen):
     screen.fill(BLACK)
 
     # Draw the kaleidoscope
-    draw_kaleidoscope(screen, bass, midrange, treble)
+    draw_kaleidoscope(screen, bass, midrange, treble, selected_palette)
+
+    selected_palette = switch_palette(selected_palette)
+
+    draw_palette_name(screen, selected_palette)
 
     # Update the display
     pygame.display.update()
-
-    pygame.time.wait(100)
 
 def cleanup():
     """Clean up resources for the show."""

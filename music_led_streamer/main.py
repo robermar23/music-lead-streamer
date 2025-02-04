@@ -37,6 +37,7 @@ def run(
     device_index: int = typer.Argument(1, help="Index of the audio device to use"),
     blocksize: int = typer.Argument(1024, help="Block size for audio processing"),
     latency: float = typer.Argument(0.1, help="Audio stream latency"),
+    fps: int = typer.Argument(30, help="Frames per second for the display")
 ):
     """
     Run a specific show by name.
@@ -77,7 +78,7 @@ def run(
                 if event.type == pygame.QUIT:
                     running = False
 
-            clock.tick(30)  # Limit frame rate to 30 FPS
+            clock.tick(fps)  # Limit frame rate FPS
 
     except KeyboardInterrupt:
         typer.echo("Exiting show.")
@@ -101,6 +102,7 @@ def rotate(
     blocksize: int = typer.Argument(1024, help="Block size for audio processing"),
     latency: float = typer.Argument(0.1, help="Audio stream latency"),
     timer: int = typer.Argument(30, help="Time in seconds before switching to the next show"),
+    fps: int = typer.Argument(30, help="Frames per second for the display")
 ):
     """Rotate through each show based on a timer. Press SPACEBAR to skip to the next show."""
     # List available shows
@@ -160,7 +162,7 @@ def rotate(
                     load_show(current_index)
                     start_time = time.time()
 
-            clock.tick(30)  # Limit frame rate to 30 FPS
+            clock.tick(fps)  # Limit frame rate FPS
 
         except Exception as e:
             typer.echo(f"Error running show '{shows[current_index]}': {e}")
@@ -179,28 +181,30 @@ def config():
         print(f"Configuration found: {config}")
         if config["command"] == "run":
             run(show=config["show"], 
-                      display=config["display"], 
-                      video_driver=config["video_driver"], 
-                      screen_width=config["screen_width"], 
-                      screen_height=config["screen_height"], 
-                      samplerate=config["samplerate"], 
-                      channels=config["channels"], 
-                      device_index=config["device_index"], 
-                      blocksize=config["blocksize"], 
-                      latency=config["latency"]
-                    )
+                display=config["display"], 
+                video_driver=config["video_driver"], 
+                screen_width=config["screen_width"], 
+                screen_height=config["screen_height"], 
+                samplerate=config["samplerate"], 
+                channels=config["channels"], 
+                device_index=config["device_index"], 
+                blocksize=config["blocksize"], 
+                latency=config["latency"],
+                fps=config["fps"]
+            )
         elif config["command"] == "rotate":
             rotate(display=config["display"], 
-                      video_driver=config["video_driver"], 
-                      screen_width=config["screen_width"], 
-                      screen_height=config["screen_height"], 
-                      samplerate=config["samplerate"], 
-                      channels=config["channels"], 
-                      device_index=config["device_index"], 
-                      blocksize=config["blocksize"], 
-                      latency=config["latency"],
-                      timer=config["timer"]
-                    )
+                  video_driver=config["video_driver"], 
+                screen_width=config["screen_width"], 
+                screen_height=config["screen_height"], 
+                samplerate=config["samplerate"], 
+                channels=config["channels"], 
+                device_index=config["device_index"], 
+                blocksize=config["blocksize"], 
+                latency=config["latency"],
+                timer=config["timer"],
+                fps=config["fps"]
+            )
     else:
         print("No configuration found. Will 'run` with defaults...")
         typer.run(run)
