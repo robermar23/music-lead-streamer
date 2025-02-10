@@ -1,5 +1,12 @@
 # Byte-compiled / optimized / DLL files
+# Ignore all __pycache__ directories and their contents
 __pycache__/
+
+# Ignore Python compiled files
+*.pyc
+*.pyo
+*.pyd
+
 *.py[cod]
 *$py.class
 
@@ -105,7 +112,7 @@ ipython_config.py
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
+poetry.lock
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
@@ -173,5 +180,3 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-__pycache__
-*/__pycache__

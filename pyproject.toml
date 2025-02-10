@@ -18,6 +18,10 @@ build = "^1.2.2.post1"
 pyinstaller = "^6.11.1"
 pyinstaller-versionfile = "^3.0.0"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-mock = "^3.14.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

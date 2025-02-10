@@ -3,7 +3,12 @@ import random
 import math
 
 class Bubble:
+    """Represents a bubble with visual effects.
+
+    Bubbles have a position, size, speed, color, and can move and be drawn on the screen.
+    """
     def __init__(self, x, y, size, speed, color):
+        """Initialize the bubble with its position, size, speed, and color."""
         self.x = x
         self.y = y
         self.size = size
@@ -33,4 +38,3 @@ class Bubble:
 
         # Draw bubble surface to the screen
         screen.blit(bubble_surface, (int(self.x - self.size), int(self.y - self.size)))
-

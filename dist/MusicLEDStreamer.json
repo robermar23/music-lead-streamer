@@ -1,6 +1,6 @@
 {
   "command": "run",
-  "show": "image_dance",
+  "show": "rings",
   "display": "1",
   "video_driver": "directx",
   "screen_width": 1080,
@@ -9,7 +9,5 @@
   "channels": 2,
   "device_index": 39,
   "blocksize": 1024,
-  "latency": 0.0,
-  "time": 120,
-  "fps": 30
+  "latency": 0.1
 }
